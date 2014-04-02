@@ -24,6 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
@@ -76,6 +77,13 @@ public class ParallelTraining {
 				weights.setTransitionWeights(new double[labelNum*labelNum]);
 				weights.setBosTransitionWeights(new double[labelNum]);
 				weights.setEosTransitionWeights(new double[labelNum]);
+				String[] labelTexts=new String[labelNum];
+				Iterator<String> iter=tc.getTags().iterator();
+				for(int i=0;i<labelNum;i++){
+					labelTexts[i]=iter.next();
+				}
+				weights.setLabelTexts(labelTexts);
+				//context.getCounter(TrainingMapper.class.getSimpleName(), ""+(labelNum*attrNum)).increment(1);
 			}else{
 				//TODO read from hdfs
 			}
@@ -101,7 +109,11 @@ public class ParallelTraining {
 			dataSet.setInstances(instances);
 			dataSet.setLabelNum(tc.getTagNum());
 			dataSet.setAttributeNum(attrNum);
-			SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights);
+			try{
+				SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights);
+			}catch(Exception e){
+				throw new IOException(e);
+			}
 			context.write(NullWritable.get(), weights);
 		}
 

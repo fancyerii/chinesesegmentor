@@ -859,7 +859,7 @@ public class SgdCrf {
 		double[] eosTransitionWeights = weights.getEosTransitionWeights();
 		double[] transitionWeights = weights.getTransitionWeights();
 		double[] attributeWeights = weights.getAttributeWeights();
-		int attributeNum = attributeWeights.length;
+		//int attributeNum = attributeWeights.length;
 
 		for (int epoch = 1; epoch <= iterationNum; epoch++) {
 
@@ -928,10 +928,17 @@ public class SgdCrf {
 								+ toLabelIndex] *= scale;
 					}
 				}
-				for (int attributeIndex = 0; attributeIndex < attributeNum; attributeIndex++) {
-					for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-						attributeWeights[attributeIndex * labelNum + labelIndex] *= scale;
-					}
+//				for (int attributeIndex = 0; attributeIndex < attributeNum; attributeIndex++) {
+//					for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
+//						int idx=attributeIndex * labelNum + labelIndex;
+//						if(idx==54655554){
+//							throw new RuntimeException(String.format("idx(%d)=attributeIndex(%d) * labelNum(%d) + labelIndex(%d)",idx,attributeIndex,labelNum,labelIndex));
+//						}
+//						attributeWeights[idx] *= scale;
+//					}
+//				}
+				for(int idx=0;idx<attributeWeights.length;idx++){
+					attributeWeights[idx] *= scale;
 				}
 				decay = 1.0;
 				proj = 1.0;
