@@ -51,6 +51,7 @@ import com.antbrains.crf.TagConvertor;
 import com.antbrains.crf.Template;
 import com.antbrains.crf.TrainingDataSet;
 import com.antbrains.crf.TrainingParams;
+import com.antbrains.crf.TrainingProgress;
 import com.antbrains.crf.TrainingWeights;
 import com.google.gson.Gson;
 
@@ -110,7 +111,30 @@ public class ParallelTraining {
 			dataSet.setLabelNum(tc.getTagNum());
 			dataSet.setAttributeNum(attrNum);
 			try{
-				SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights);
+				SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights, new TrainingProgress() {
+					
+					@Override
+					public void startTraining() {
+						System.out.println(new java.util.Date()+" start training...");
+					}
+					
+					@Override
+					public void finishTraining() {
+						System.out.println(new java.util.Date()+" finish training.");
+					}
+					
+					@Override
+					public void doValidate(String s) {
+						System.out.println(new java.util.Date()+" validate result: ");
+						System.out.println(s);
+					}
+					
+					@Override
+					public void doIter(int iter) {
+						System.out.println(new java.util.Date()+" iter "+iter);
+						context.progress();
+					}
+				});
 			}catch(Exception e){
 				throw new IOException(e);
 			}

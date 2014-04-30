@@ -1,5 +1,5 @@
 package com.antbrains.crf;
- 	
+
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -36,7 +36,6 @@ import com.google.gson.Gson;
 
 import de.ruedigermoeller.serialization.FSTObjectInput;
 import de.ruedigermoeller.serialization.FSTObjectOutput;
- 	
 
 /*
  * 
@@ -321,7 +320,7 @@ public class SgdCrf {
 		for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
 			expTransitionWeights[labelIndex] = new double[labelNum];
 		}
-		
+
 		for (int i = 0; i < seqNum; i++) {
 			Instance instances = trainInstances.get(i);
 			int itemNum = instances.length();
@@ -544,7 +543,8 @@ public class SgdCrf {
 					1.0 / (lambda * etaValue), lambda, dataSet.getLabelNum(),
 					weights.getBosTransitionWeights(),
 					weights.getEosTransitionWeights(),
-					weights.getTransitionWeights(), weights.getAttributeWeights());
+					weights.getTransitionWeights(),
+					weights.getAttributeWeights());
 			boolean ok = !Double.isInfinite(logp) && logp > initialLogProb;
 			if (ok) {
 				System.out.println(String.format("%f\n", logp));
@@ -560,19 +560,23 @@ public class SgdCrf {
 			}
 			if (!decrease) {
 				if (ok) {
-					System.out.println(String.format("etaValue(%f)*=rate(%f)", etaValue,param.getRate()));
+					System.out.println(String.format("etaValue(%f)*=rate(%f)",
+							etaValue, param.getRate()));
 					etaValue *= param.getRate();
-					System.out.println("etaValue="+etaValue);
+					System.out.println("etaValue=" + etaValue);
 				} else {
 					decrease = true;
-					System.out.println(String.format("initEtaValue(%f)/=rate(%f)", initEtaValue,param.getRate()));
+					System.out.println(String.format(
+							"initEtaValue(%f)/=rate(%f)", initEtaValue,
+							param.getRate()));
 					etaValue = initEtaValue / param.getRate();
-					System.out.println("etaValue="+etaValue);
+					System.out.println("etaValue=" + etaValue);
 				}
 			} else {
-				System.out.println(String.format("etaValue(%f)/=rate(%f)", etaValue,param.getRate()));
+				System.out.println(String.format("etaValue(%f)/=rate(%f)",
+						etaValue, param.getRate()));
 				etaValue /= param.getRate();
-				System.out.println("etaValue="+etaValue);
+				System.out.println("etaValue=" + etaValue);
 			}
 			++trial;
 
@@ -583,62 +587,68 @@ public class SgdCrf {
 
 		return 1.0 / (lambda * etaValue);
 	}
-	
-	public static void saveModel(TrainingParams params, TrainingWeights weights, String fileName) throws IOException{
-		FSTObjectOutput foo=null;
-		try{
-			foo=new FSTObjectOutput(new FileOutputStream(fileName));
+
+	public static void saveModel(TrainingParams params,
+			TrainingWeights weights, String fileName) throws IOException {
+		FSTObjectOutput foo = null;
+		try {
+			foo = new FSTObjectOutput(new FileOutputStream(fileName));
 			foo.writeObject(params, TrainingParams.class);
 			foo.writeObject(weights, TrainingWeights.class);
-		}finally{
-			if(foo!=null){
+		} finally {
+			if (foo != null) {
 				foo.close();
 			}
 		}
-		
+
 	}
-	
-	public static CrfModel loadModel(String fileName) throws Exception{
-		FSTObjectInput foi=null;
-		try{
-			foi=new FSTObjectInput(new FileInputStream(fileName));
-			TrainingParams params= (TrainingParams) foi.readObject(TrainingParams.class);
-			TrainingWeights weights=(TrainingWeights)foi.readObject(TrainingWeights.class);
-			
+
+	public static CrfModel loadModel(String fileName) throws Exception {
+		FSTObjectInput foi = null;
+		try {
+			foi = new FSTObjectInput(new FileInputStream(fileName));
+			TrainingParams params = (TrainingParams) foi
+					.readObject(TrainingParams.class);
+			TrainingWeights weights = (TrainingWeights) foi
+					.readObject(TrainingWeights.class);
+
 			return new CrfModel(params, weights);
-		}finally{
-			if(foi!=null){
+		} finally {
+			if (foi != null) {
 				foi.close();
 			}
 		}
 	}
-	
-	private static Instance readInstance(Gson gson,String line){
-		String[] arr=line.split("\t",2);
+
+	private static Instance readInstance(Gson gson, String line) {
+		String[] arr = line.split("\t", 2);
 		return gson.fromJson(arr[1], Instance.class);
 	}
-	
-	public static List<Instance> buildSamples4Calibrate(FileSystem hdfsFs,String path,
-			int K,String charset,long[] totalSample) throws IOException{
-		Instance[] r=new Instance[K];
-		Path file=new Path(path);
+
+	public static List<Instance> buildSamples4Calibrate(FileSystem hdfsFs,
+			String path, int K, String charset, long[] totalSample)
+			throws IOException {
+		Instance[] r = new Instance[K];
+		Path file = new Path(path);
 		FileStatus[] status = hdfsFs.listStatus(file);
 		RandomDataGenerator rndgen = new RandomDataGenerator();
-		CompressionCodecFactory factory = new CompressionCodecFactory(hdfsFs.getConf());
-		Gson gson=new Gson();
-		long lineNum=0;
+		CompressionCodecFactory factory = new CompressionCodecFactory(
+				hdfsFs.getConf());
+		Gson gson = new Gson();
+		long lineNum = 0;
 
-		for(FileStatus stat:status){
-			if(stat.isDir()){
-				System.out.println("ignore subdir: "+stat.getPath().toString());
-			}else{
-				Path f=stat.getPath();
-				if(f.getName().startsWith("_")){
-					System.out.println("ignore hidden file: "+f.toString());
-				}else{
-					System.out.println("process: "+f.toString());
-					BufferedReader br=null;
-					try{
+		for (FileStatus stat : status) {
+			if (stat.isDir()) {
+				System.out.println("ignore subdir: "
+						+ stat.getPath().toString());
+			} else {
+				Path f = stat.getPath();
+				if (f.getName().startsWith("_")) {
+					System.out.println("ignore hidden file: " + f.toString());
+				} else {
+					System.out.println("process: " + f.toString());
+					BufferedReader br = null;
+					try {
 						CompressionCodec codec = factory.getCodec(f);
 						InputStream stream = null;
 
@@ -648,95 +658,103 @@ public class SgdCrf {
 						} else {
 							stream = hdfsFs.open(f);
 						}
-						br=new BufferedReader(new InputStreamReader(stream,charset));
+						br = new BufferedReader(new InputStreamReader(stream,
+								charset));
 						String line;
-						while((line=br.readLine())!=null){
-							Instance instance=null;
-							
-							
-							//Reservoir sampling
-							if(lineNum<K){
-								instance=readInstance(gson, line);
-								r[(int)lineNum]=instance;
-							}else{
-								long j=rndgen.nextLong(0, lineNum);
-								if(j<K){
-									instance=readInstance(gson, line);
-									r[(int)j]=instance;
+						while ((line = br.readLine()) != null) {
+							Instance instance = null;
+
+							// Reservoir sampling
+							if (lineNum < K) {
+								instance = readInstance(gson, line);
+								r[(int) lineNum] = instance;
+							} else {
+								long j = rndgen.nextLong(0, lineNum);
+								if (j < K) {
+									instance = readInstance(gson, line);
+									r[(int) j] = instance;
 								}
 							}
-							
-							
+
 							lineNum++;
-							if(lineNum%100000==0){
-								System.out.println(new java.util.Date()+" buildSamples4Calibrate: "+lineNum);
+							if (lineNum % 100000 == 0) {
+								System.out
+										.println(new java.util.Date()
+												+ " buildSamples4Calibrate: "
+												+ lineNum);
 							}
 						}
-					}finally{
-						if(br!=null){
+					} finally {
+						if (br != null) {
 							br.close();
 						}
 					}
 				}
 			}
 		}
-		
-		totalSample[0]=lineNum;
-		
-		List<Instance> instances=new ArrayList<Instance>(r.length);
-		for(Instance instance:r){
-			if(instance!=null){
+
+		totalSample[0] = lineNum;
+
+		List<Instance> instances = new ArrayList<Instance>(r.length);
+		for (Instance instance : r) {
+			if (instance != null) {
 				instances.add(instance);
 			}
 		}
 
 		return instances;
 	}
-	
-	public static OnePassResult firstPassScan(FileSystem hdfsFs,String path,TagConvertor tc,Template template,int K,String charset,FeatureDictEnum dictType) throws IOException{
-		OnePassResult opr=new OnePassResult(dictType);
-		FeatureDict attributeDict=opr.getAttributes();
-		TObjectIntHashMap<String> labelDict=opr.getLabels();
-		Path file=new Path(path);
+
+	public static OnePassResult firstPassScan(FileSystem hdfsFs, String path,
+			TagConvertor tc, Template template, int K, String charset,
+			FeatureDictEnum dictType) throws IOException {
+		OnePassResult opr = new OnePassResult(dictType);
+		FeatureDict attributeDict = opr.getAttributes();
+		TObjectIntHashMap<String> labelDict = opr.getLabels();
+		Path file = new Path(path);
 		FileStatus[] status = hdfsFs.listStatus(file);
-		Random rnd=new Random();
-		Instance[] r=new Instance[K];
-		long lineNum=0;
-		for(FileStatus stat:status){
-			if(stat.isDir()){
-				System.out.println("ignore subdir: "+stat.getPath().toString());
-			}else{
-				Path f=stat.getPath();
-				if(f.getName().startsWith(".")){
-					System.out.println("ignore hidden file: "+f.toString());
-				}else{
-					System.out.println("process: "+f.toString());
-					BufferedReader br=null;
-					try{
-						br=new BufferedReader(new InputStreamReader(hdfsFs.open(f),charset));
+		Random rnd = new Random();
+		Instance[] r = new Instance[K];
+		long lineNum = 0;
+		for (FileStatus stat : status) {
+			if (stat.isDir()) {
+				System.out.println("ignore subdir: "
+						+ stat.getPath().toString());
+			} else {
+				Path f = stat.getPath();
+				if (f.getName().startsWith(".")) {
+					System.out.println("ignore hidden file: " + f.toString());
+				} else {
+					System.out.println("process: " + f.toString());
+					BufferedReader br = null;
+					try {
+						br = new BufferedReader(new InputStreamReader(
+								hdfsFs.open(f), charset));
 						String line;
-						while((line=br.readLine())!=null){
-							String[] tokens=line.split("\t");
-							Instance instance=buildInstance(tokens, tc, attributeDict, labelDict, template, true, true);
-							
-							//Reservoir sampling
-							if(lineNum<K){
-								r[(int)lineNum]=instance;
-							}else{
-								long j=rnd.nextLong()%lineNum;
-								if(j<K){
-									r[(int)j]=instance;
+						while ((line = br.readLine()) != null) {
+							String[] tokens = line.split("\t");
+							Instance instance = buildInstance(tokens, tc,
+									attributeDict, labelDict, template, true,
+									true);
+
+							// Reservoir sampling
+							if (lineNum < K) {
+								r[(int) lineNum] = instance;
+							} else {
+								long j = rnd.nextLong() % lineNum;
+								if (j < K) {
+									r[(int) j] = instance;
 								}
 							}
-							
-							
+
 							lineNum++;
-							if(lineNum%100000==0){
-								System.out.println(new java.util.Date()+" firstPass: "+lineNum);
+							if (lineNum % 100000 == 0) {
+								System.out.println(new java.util.Date()
+										+ " firstPass: " + lineNum);
 							}
 						}
-					}finally{
-						if(br!=null){
+					} finally {
+						if (br != null) {
 							br.close();
 						}
 					}
@@ -744,67 +762,72 @@ public class SgdCrf {
 			}
 		}
 		opr.setTotalNumber(lineNum);
-		ArrayList<Instance> instances=opr.getInstances();
+		ArrayList<Instance> instances = opr.getInstances();
 		instances.ensureCapacity(K);
-		for(Instance instance:r){
+		for (Instance instance : r) {
 			instances.add(instance);
 		}
 		return opr;
 	}
-	
-	public static void genFeatureDictAndInstances(FileSystem hdfsFs,String path, int validateNum,Template template,
-			int iterationNum, TrainingParams param,TagConvertor tc, String charset,
-			TrainingWeights weights, FeatureDictEnum dictType, String featureFile,String instanceFile) throws IOException{
-		int sampleNum=param.getSamplesNum();
-		OnePassResult opr=firstPassScan(hdfsFs, path, tc, template, sampleNum, charset, dictType);
-		FeatureDict attributeDict=opr.getAttributes();
-		System.out.println("save Dict to "+featureFile);
-		FSTObjectOutput foo=null;
-		try{
-			foo=new FSTObjectOutput(new FileOutputStream(featureFile));
+
+	public static void genFeatureDictAndInstances(FileSystem hdfsFs,
+			String path, int validateNum, Template template, int iterationNum,
+			TrainingParams param, TagConvertor tc, String charset,
+			TrainingWeights weights, FeatureDictEnum dictType,
+			String featureFile, String instanceFile) throws IOException {
+		int sampleNum = param.getSamplesNum();
+		OnePassResult opr = firstPassScan(hdfsFs, path, tc, template,
+				sampleNum, charset, dictType);
+		FeatureDict attributeDict = opr.getAttributes();
+		System.out.println("save Dict to " + featureFile);
+		FSTObjectOutput foo = null;
+		try {
+			foo = new FSTObjectOutput(new FileOutputStream(featureFile));
 			foo.writeObject(attributeDict);
-		}finally{
-			if(foo!=null){
+		} finally {
+			if (foo != null) {
 				foo.close();
 			}
 		}
-		System.out.println("save instance to " +instanceFile);
-		List<Instance> instances=opr.getInstances();
-		
-		try{
-			foo=new FSTObjectOutput(new FileOutputStream(instanceFile));
+		System.out.println("save instance to " + instanceFile);
+		List<Instance> instances = opr.getInstances();
+
+		try {
+			foo = new FSTObjectOutput(new FileOutputStream(instanceFile));
 			foo.writeObject(instances);
-		}finally{
-			if(foo!=null){
+		} finally {
+			if (foo != null) {
 				foo.close();
 			}
 		}
 	}
-	
-	
-	public static void train(FileSystem hdfsFs,String path,Template template,int iterationNum, TrainingParams param, TagConvertor tc,String charset,
-			TrainingWeights weights,FeatureDict dict) throws IOException{
-		int sampleNum=param.getSamplesNum();
-		System.out.println("get instances for calibrate, number="+sampleNum);
-		TObjectIntHashMap<String> labelDict=new TObjectIntHashMap<String>();
-		for(String tag:tc.getTags()){
+
+	public static void train(FileSystem hdfsFs, String path, Template template,
+			int iterationNum, TrainingParams param, TagConvertor tc,
+			String charset, TrainingWeights weights, FeatureDict dict)
+			throws IOException {
+		int sampleNum = param.getSamplesNum();
+		System.out.println("get instances for calibrate, number=" + sampleNum);
+		TObjectIntHashMap<String> labelDict = new TObjectIntHashMap<String>();
+		for (String tag : tc.getTags()) {
 			labelDict.put(tag, labelDict.size());
 		}
-		long[] totalInstances=new long[0];
-		List<Instance> calibrateInstances=buildSamples4Calibrate(hdfsFs, path, sampleNum, charset,totalInstances);
-		System.out.println("totalInstances: "+totalInstances[0]);
-		TrainingDataSet ds=new TrainingDataSet();
+		long[] totalInstances = new long[0];
+		List<Instance> calibrateInstances = buildSamples4Calibrate(hdfsFs,
+				path, sampleNum, charset, totalInstances);
+		System.out.println("totalInstances: " + totalInstances[0]);
+		TrainingDataSet ds = new TrainingDataSet();
 		ds.setLabelNum(labelDict.size());
 		ds.setInstances(calibrateInstances);
-		
+
 		System.out.println("start sgd");
-		
+
 		int t = 0;
 		double decay = 1.0, proj = 1.0;
-		
+
 		double lambda = 1.0 / (param.getSigma() * param.getSigma() * totalInstances[0]);
-		
-		int labelNum=labelDict.size();
+
+		int labelNum = labelDict.size();
 		double[] expBosTransitionWeights = new double[labelNum];
 		double[] expEosTransitionWeights = new double[labelNum];
 		double[][] expTransitionWeighs = new double[labelNum][];
@@ -818,7 +841,8 @@ public class SgdCrf {
 	}
 
 	public static void train(TrainingDataSet dataSet, int validateNum,
-			int iterationNum, TrainingParams param, TrainingWeights weights) {
+			int iterationNum, TrainingParams param, TrainingWeights weights,
+			TrainingProgress tp) {
 		List<Instance> instances = dataSet.getInstances();
 		int labelNum = dataSet.getLabelNum();
 
@@ -827,8 +851,8 @@ public class SgdCrf {
 		List<Instance> trainInstances = instances.subList(validateNum,
 				instances.size());
 
-		System.out.println("start sgd");
-
+		// System.out.println("start sgd");
+		tp.startTraining();
 		boolean validate = validateInstances != null
 				&& validateInstances.size() > 0;
 
@@ -844,12 +868,12 @@ public class SgdCrf {
 		for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
 			expTransitionWeighs[labelIndex] = new double[labelNum];
 		}
-		double t0=0;
-		if(param.getT0()==0){
-			System.out.println("calibrating");
+		double t0 = 0;
+		if (param.getT0() == 0) {
+			// System.out.println("calibrating");
 			t0 = calibrate(dataSet, lambda, param, weights);
-		}else{
-			t0=param.getT0();
+		} else {
+			t0 = param.getT0();
 		}
 
 		double norm2 = 0;
@@ -859,11 +883,12 @@ public class SgdCrf {
 		double[] eosTransitionWeights = weights.getEosTransitionWeights();
 		double[] transitionWeights = weights.getTransitionWeights();
 		double[] attributeWeights = weights.getAttributeWeights();
-		//int attributeNum = attributeWeights.length;
+		// int attributeNum = attributeWeights.length;
 
 		for (int epoch = 1; epoch <= iterationNum; epoch++) {
-
-			System.out.println(new java.util.Date()+" iteration No. " + epoch);
+			tp.doIter(epoch);
+			// System.out.println(new java.util.Date()+" iteration No. " +
+			// epoch);
 			Collections.shuffle(trainInstances);
 
 			double scale = 0;
@@ -928,41 +953,42 @@ public class SgdCrf {
 								+ toLabelIndex] *= scale;
 					}
 				}
-//				for (int attributeIndex = 0; attributeIndex < attributeNum; attributeIndex++) {
-//					for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-//						int idx=attributeIndex * labelNum + labelIndex;
-//						if(idx==54655554){
-//							throw new RuntimeException(String.format("idx(%d)=attributeIndex(%d) * labelNum(%d) + labelIndex(%d)",idx,attributeIndex,labelNum,labelIndex));
-//						}
-//						attributeWeights[idx] *= scale;
-//					}
-//				}
-				for(int idx=0;idx<attributeWeights.length;idx++){
+				// for (int attributeIndex = 0; attributeIndex < attributeNum;
+				// attributeIndex++) {
+				// for (int labelIndex = 0; labelIndex < labelNum; labelIndex++)
+				// {
+				// int idx=attributeIndex * labelNum + labelIndex;
+				// if(idx==54655554){
+				// throw new
+				// RuntimeException(String.format("idx(%d)=attributeIndex(%d) * labelNum(%d) + labelIndex(%d)",idx,attributeIndex,labelNum,labelIndex));
+				// }
+				// attributeWeights[idx] *= scale;
+				// }
+				// }
+				for (int idx = 0; idx < attributeWeights.length; idx++) {
 					attributeWeights[idx] *= scale;
 				}
 				decay = 1.0;
 				proj = 1.0;
-				System.out
-						.println("scale weights and reset decay and proj to 1");
+				// System.out.println("scale weights and reset decay and proj to 1");
 			}
 
 			if (validate) {
 				EvaluationResult statsOnValidateData = evaluate(
 						validateInstances, weights);
-				System.out.println("statistics on validate data: ");
-				System.out
-						.println("\n" + statsOnValidateData.toString() + "\n");
-
+				// System.out.println("statistics on validate data: ");
+				// System.out.println("\n" + statsOnValidateData.toString() +
+				// "\n");
+				tp.doValidate(statsOnValidateData.toString());
 			}
 
 		}
-		
-		System.out.println("validate on all data");
-		EvaluationResult statsOnValidateData = evaluate(
-				instances, weights);
-		System.out.println("statistics on validate data: ");
-		System.out
-				.println("\n" + statsOnValidateData.toString() + "\n");
+
+		// System.out.println("validate on all data");
+		EvaluationResult statsOnValidateData = evaluate(instances, weights);
+		tp.doValidate(statsOnValidateData.toString());
+		// System.out.println("statistics on validate data: ");
+		// System.out.println("\n" + statsOnValidateData.toString() + "\n");
 	}
 
 	private static EvaluationResult evaluate(List<Instance> instances,
@@ -1070,12 +1096,13 @@ public class SgdCrf {
 		}
 		return tagIndexes;
 	}
-	
-	private static int getFeatureIndex(FeatureDict map, String key, boolean isTraining) {
-		int index = map.get(key,false);
-		
-		if (index < 0 && isTraining) {		
-			if(key.contains("_B-")||key.contains("_B+")){
+
+	private static int getFeatureIndex(FeatureDict map, String key,
+			boolean isTraining) {
+		int index = map.get(key, false);
+
+		if (index < 0 && isTraining) {
+			if (key.contains("_B-") || key.contains("_B+")) {
 				return index;
 			}
 			index = map.get(key, true);
@@ -1083,23 +1110,26 @@ public class SgdCrf {
 		}
 		return index;
 	}
-	
-	private static int getLabelIndex(TObjectIntHashMap<String> labelDict,String key, boolean isTraining){
+
+	private static int getLabelIndex(TObjectIntHashMap<String> labelDict,
+			String key, boolean isTraining) {
 		int index = labelDict.get(key);
-		if(index<0 && isTraining){
-			labelDict.put(key, index=labelDict.size());
+		if (index < 0 && isTraining) {
+			labelDict.put(key, index = labelDict.size());
 		}
 		return index;
 	}
-	
-	public static Instance buildInstance(String[] tokens, TagConvertor tc,FeatureDict attributeDict,TObjectIntHashMap<String> labelDict,
-			Template template,boolean addFeatureIfNotExist,boolean addLableIfNotExist){
-		String[] tags=tc.tokens2Tags(tokens);
-		int itemNum=tags.length;
-		List<String> attributes=new ArrayList<String>();
-		for(String token:tokens){
-			for(int i=0;i<token.length();i++){
-				attributes.add(token.substring(i,i+1));
+
+	public static Instance buildInstance(String[] tokens, TagConvertor tc,
+			FeatureDict attributeDict, TObjectIntHashMap<String> labelDict,
+			Template template, boolean addFeatureIfNotExist,
+			boolean addLableIfNotExist) {
+		String[] tags = tc.tokens2Tags(tokens);
+		int itemNum = tags.length;
+		List<String> attributes = new ArrayList<String>();
+		for (String token : tokens) {
+			for (int i = 0; i < token.length(); i++) {
+				attributes.add(token.substring(i, i + 1));
 			}
 		}
 		if (template != null) {
@@ -1108,26 +1138,28 @@ public class SgdCrf {
 		int[] attrIds = new int[attributes.size()];
 		int rowSize = attributes.size() / itemNum;
 		int[] labelIds = new int[itemNum];
-		
+
 		for (int itemIndex = 0, attrIndex = 0; itemIndex < itemNum; itemIndex++) {
-			labelIds[itemIndex] = getLabelIndex(labelDict, tags[itemIndex], addLableIfNotExist);
-//			if(labelIds[itemIndex]==-1){
-//				System.out.println("bug");
-//				for(String token:tokens){
-//					System.out.print(token+"\t");
-//				}
-//				System.out.println();
-//				System.out.println("tags["+itemNum+"]="+tags[itemIndex]);
-//				System.out.println(labelDict.size());
-//				TObjectIntIterator<String> iter=labelDict.iterator();
-//				while(iter.hasNext()){
-//					iter.advance();
-//					System.out.println(iter.key()+"\t"+iter.value());
-//				}
-//				System.exit(-1);
-//			}
+			labelIds[itemIndex] = getLabelIndex(labelDict, tags[itemIndex],
+					addLableIfNotExist);
+			// if(labelIds[itemIndex]==-1){
+			// System.out.println("bug");
+			// for(String token:tokens){
+			// System.out.print(token+"\t");
+			// }
+			// System.out.println();
+			// System.out.println("tags["+itemNum+"]="+tags[itemIndex]);
+			// System.out.println(labelDict.size());
+			// TObjectIntIterator<String> iter=labelDict.iterator();
+			// while(iter.hasNext()){
+			// iter.advance();
+			// System.out.println(iter.key()+"\t"+iter.value());
+			// }
+			// System.exit(-1);
+			// }
 			for (int rowIndex = 0; rowIndex < rowSize; rowIndex++) {
-				attrIds[attrIndex] = getFeatureIndex(attributeDict, attributes.get(attrIndex), addFeatureIfNotExist);
+				attrIds[attrIndex] = getFeatureIndex(attributeDict,
+						attributes.get(attrIndex), addFeatureIfNotExist);
 				attrIndex++;
 			}
 		}
@@ -1135,7 +1167,7 @@ public class SgdCrf {
 	}
 
 	private static Instance buildInstance(List<String> attributes, int itemNum,
-			List<String> labels, TrainingWeights weights,boolean isTraining) {
+			List<String> labels, TrainingWeights weights, boolean isTraining) {
 		Template template = weights.getTemplate();
 		TObjectIntHashMap<String> labelDict = weights.getLabelDict();
 		FeatureDict attributeDict = weights.getAttributeDict();
@@ -1151,93 +1183,176 @@ public class SgdCrf {
 		}
 		for (int itemIndex = 0, attrIndex = 0; itemIndex < itemNum; itemIndex++) {
 			if (containsLabels) {
-				labelIds[itemIndex] = getLabelIndex(labelDict, labels.get(itemIndex), isTraining);
+				labelIds[itemIndex] = getLabelIndex(labelDict,
+						labels.get(itemIndex), isTraining);
 			}
 
 			for (int rowIndex = 0; rowIndex < rowSize; rowIndex++) {
-				attrIds[attrIndex] = getFeatureIndex(attributeDict, attributes.get(attrIndex), isTraining);
+				attrIds[attrIndex] = getFeatureIndex(attributeDict,
+						attributes.get(attrIndex), isTraining);
 				attrIndex++;
 			}
 		}
 		return containsLabels ? new Instance(attrIds, labelIds) : new Instance(
 				attrIds, itemNum);
 	}
-	
-	public static List<Instance> readTestData(String filename, String charset, TrainingWeights weights) throws IOException{
+
+	public static List<Instance> readTestData(String filename, String charset,
+			TrainingWeights weights) throws IOException {
 		return getInstances(filename, charset, true, weights, false);
 	}
-	
-	public static List<Instance> readTestData2(String filename, String charset, TrainingWeights weights,TagConvertor tc) throws IOException{
-		return getInstances2(filename,charset,true,weights,false, tc);
+
+	public static List<Instance> readTestData2(String filename, String charset,
+			TrainingWeights weights, TagConvertor tc) throws IOException {
+		return getInstances2(filename, charset, true, weights, false, tc);
 	}
-	
-	private static TrainingDataSet shrinkAndInit(int minFeatureFreq, List<Instance> instances, TrainingWeights weights){
-		if(minFeatureFreq>1){
-			SgdCrf.shrinkAttributeDict(instances, minFeatureFreq, weights.getAttributeDict());
+
+	public static EvaluationResult readAndEvaluate(String filename,
+			String charset, TrainingWeights weights, TagConvertor tc)
+			throws IOException {
+		BufferedReader br = null;
+
+		String[] labelTexts = weights.getLabelTexts();
+		EvaluationResult evaluation = new EvaluationResult(labelTexts);
+		try {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(
+					filename), charset));
+			String line;
+			int lineNumber = 0;
+			while ((line = br.readLine()) != null) {
+				if (line.trim().length() == 0) {
+					continue;
+				}
+				lineNumber++;
+				Instance instance = buildInstance(line.split("\t"), tc,
+						weights.getAttributeDict(), weights.getLabelDict(),
+						weights.getTemplate(), false, false);
+
+				if (lineNumber % 10000 == 0) {
+					System.out.println(lineNumber + " lines evaluated");
+				}
+				
+				int[] tagIds = tagId(instance, weights);
+				evaluation.totalItemCount += tagIds.length;
+				boolean hasError = false;
+				for (int itemIndex = 0; itemIndex < instance.length(); itemIndex++) {
+					int keyIndex = tagIds[itemIndex];
+					int answerIndex = instance.labelIds()[itemIndex];
+					for (int labelIndex = 0; labelIndex < labelTexts.length; labelIndex++) {
+						int[] counts = evaluation.labelIndex2count[labelIndex];
+						if (answerIndex == labelIndex) {
+							if (keyIndex == labelIndex) {
+								counts[EvaluationResult.TP_INDEX]++;
+							} else {
+								counts[EvaluationResult.FP_INDEX]++;
+							}
+						} else {
+							if (keyIndex == labelIndex) {
+								counts[EvaluationResult.FN_INDEX]++;
+							} else {
+								counts[EvaluationResult.TN_INDEX]++;
+							}
+						}
+					}
+					if (answerIndex == keyIndex) {
+						evaluation.correctItemCount++;
+					} else if (!hasError) {
+						hasError = true;
+					}
+				}
+				evaluation.totalSeqCount++;
+				if (!hasError) {
+					evaluation.correctSeqCount++;
+				}
+			}
+
+		} finally {
+			if (br != null) {
+				br.close();
+			}
 		}
-		TrainingDataSet dataSet=new TrainingDataSet();
+
+		return evaluation;
+	}
+
+	private static TrainingDataSet shrinkAndInit(int minFeatureFreq,
+			List<Instance> instances, TrainingWeights weights) {
+		if (minFeatureFreq > 1) {
+			SgdCrf.shrinkAttributeDict(instances, minFeatureFreq,
+					weights.getAttributeDict());
+		}
+		TrainingDataSet dataSet = new TrainingDataSet();
 		dataSet.setInstances(instances);
-		int attrNum=weights.getAttributeDict().size();
-		int labelNum=weights.getLabelDict().size();
+		int attrNum = weights.getAttributeDict().size();
+		int labelNum = weights.getLabelDict().size();
 		dataSet.setAttributeNum(attrNum);
 		dataSet.setLabelNum(labelNum);
-		
-		weights.setAttributeWeights(new double[labelNum*attrNum]);
-		weights.setTransitionWeights(new double[labelNum*labelNum]);
+
+		weights.setAttributeWeights(new double[labelNum * attrNum]);
+		weights.setTransitionWeights(new double[labelNum * labelNum]);
 		weights.setBosTransitionWeights(new double[labelNum]);
 		weights.setEosTransitionWeights(new double[labelNum]);
-		
-		final String[] labelTexts=new String[labelNum];
-		weights.getLabelDict().forEachEntry(new gnu.trove.procedure.TObjectIntProcedure<String>() {
-			@Override
-			public boolean execute(String text, int index) {
-				labelTexts[index] = text;
-				return true;
-			}
-		});
+
+		final String[] labelTexts = new String[labelNum];
+		weights.getLabelDict().forEachEntry(
+				new gnu.trove.procedure.TObjectIntProcedure<String>() {
+					@Override
+					public boolean execute(String text, int index) {
+						labelTexts[index] = text;
+						return true;
+					}
+				});
 		weights.setLabelTexts(labelTexts);
 		return dataSet;
 	}
-	
-	public static TrainingDataSet readTrainingData(String filename, String charset,TrainingWeights weights,int minFeatureFreq) throws IOException{
-		List<Instance> instances=getInstances(filename, charset, true, weights, true);
+
+	public static TrainingDataSet readTrainingData(String filename,
+			String charset, TrainingWeights weights, int minFeatureFreq)
+			throws IOException {
+		List<Instance> instances = getInstances(filename, charset, true,
+				weights, true);
 		return shrinkAndInit(minFeatureFreq, instances, weights);
-		
+
 	}
-	
-	public static TrainingDataSet readTrainingData2(String filename, String charset,TrainingWeights weights,int minFeatureFreq,TagConvertor tc) throws IOException{
-		TObjectIntHashMap<String> labeldict=weights.getLabelDict();
-		for(String tag:tc.getTags()){
+
+	public static TrainingDataSet readTrainingData2(String filename,
+			String charset, TrainingWeights weights, int minFeatureFreq,
+			TagConvertor tc) throws IOException {
+		TObjectIntHashMap<String> labeldict = weights.getLabelDict();
+		for (String tag : tc.getTags()) {
 			labeldict.put(tag, labeldict.size());
 		}
-		List<Instance> instances=getInstances2(filename, charset, true, weights, true,tc);
+		List<Instance> instances = getInstances2(filename, charset, true,
+				weights, true, tc);
 		return shrinkAndInit(minFeatureFreq, instances, weights);
 	}
-	
-	private static List<Instance> getInstances2(String filename, String charset,
-			boolean containsLabels, TrainingWeights weights, boolean isTraining,
-			TagConvertor tc) throws IOException {
-		
+
+	private static List<Instance> getInstances2(String filename,
+			String charset, boolean containsLabels, TrainingWeights weights,
+			boolean isTraining, TagConvertor tc) throws IOException {
+
 		BufferedReader br = null;
 		List<Instance> instances = new ArrayList<Instance>();
 		try {
 			br = new BufferedReader(new InputStreamReader(new FileInputStream(
 					filename), charset));
 			String line;
-			int lineNumber=0;
+			int lineNumber = 0;
 			while ((line = br.readLine()) != null) {
-				 if(line.trim().length()==0){
-					 continue;
-				 }
-				 lineNumber++;
-				 Instance instance=buildInstance(line.split("\t"), tc, weights.getAttributeDict(), weights.getLabelDict(), weights.getTemplate(), isTraining, false);
-				 instances.add(instance);
-				 if(lineNumber%10000==0){
-					 System.out.println(lineNumber + " lines read");
-				 }
- 
+				if (line.trim().length() == 0) {
+					continue;
+				}
+				lineNumber++;
+				Instance instance = buildInstance(line.split("\t"), tc,
+						weights.getAttributeDict(), weights.getLabelDict(),
+						weights.getTemplate(), isTraining, false);
+				instances.add(instance);
+				if (lineNumber % 10000 == 0) {
+					System.out.println(lineNumber + " lines read");
+				}
+
 			}
-			
+
 		} finally {
 			if (br != null) {
 				br.close();
@@ -1248,7 +1363,8 @@ public class SgdCrf {
 	}
 
 	private static List<Instance> getInstances(String filename, String charset,
-			boolean containsLabels, TrainingWeights weights, boolean isTraining) throws IOException {
+			boolean containsLabels, TrainingWeights weights, boolean isTraining)
+			throws IOException {
 		BufferedReader br = null;
 		List<Instance> instances = new ArrayList<Instance>();
 		try {
@@ -1266,7 +1382,8 @@ public class SgdCrf {
 				if (line.trim().length() == 0) {
 					if (itemList.size() > 0) {
 						Instance instance = buildInstance(itemList,
-								labelList.size(), labelList, weights, isTraining);
+								labelList.size(), labelList, weights,
+								isTraining);
 						instances.add(instance);
 						seqCount++;
 						if (seqCount % 10000 == 0) {
@@ -1315,24 +1432,35 @@ public class SgdCrf {
 
 		return instances;
 	}
-	
+
 	public static void showUsageAndExit() {
 		System.err.println("Usage:");
 		System.err.println("\t" + "SgdCrf help");
-		System.err.println("\t" + "SgdCrf train <CRF++_format_train_file> <model_file> <crf_train_properties_file> [encoding]");
-		System.err.println("\t" + "SgdCrf train2 <tab_sep_text_train_file> <model_file> <crf_train_properties_file> [encoding]");
-		System.err.println("\t" + "SgdCrf hdfs-train <hdfs_dir> <model_file> <crf_train_properties_file> <feature_dict> [encoding] [hdfsconf1] [hdfsconf2] ...");
-		System.err.println("\t" + "SgdCrf test  <test_file> <model_file> [encoding]");
+		System.err
+				.println("\t"
+						+ "SgdCrf train <CRF++_format_train_file> <model_file> <crf_train_properties_file> [encoding]");
+		System.err
+				.println("\t"
+						+ "SgdCrf train2 <tab_sep_text_train_file> <model_file> <crf_train_properties_file> [encoding]");
+		System.err
+				.println("\t"
+						+ "SgdCrf hdfs-train <hdfs_dir> <model_file> <crf_train_properties_file> <feature_dict> [encoding] [hdfsconf1] [hdfsconf2] ...");
+		System.err.println("\t"
+				+ "SgdCrf test  <test_file> <model_file> [encoding]");
+		System.err.println("\t"
+				+ "SgdCrf test2  <test_file> <model_file> [encoding]");
 		System.err.println("\t" + "SgdCrf tag <model_file> [nBest] [encoding]");
 		System.exit(1);
 	}
-	
-	public static TrainingParams loadParams(String configFile) throws IOException{
-		TrainingParams params=new TrainingParams();
-		Properties props=new Properties();
+
+	public static TrainingParams loadParams(String configFile)
+			throws IOException {
+		TrainingParams params = new TrainingParams();
+		Properties props = new Properties();
 		props.load(new FileInputStream(new File(configFile)));
-		
-		params.setMinFeatureFreq(getIntParam(props, "mininumFeatureFrequency", 1));
+
+		params.setMinFeatureFreq(getIntParam(props, "mininumFeatureFrequency",
+				1));
 		params.setEta(getDoubleParam(props, "eta", .1));
 		params.setSigma(getDoubleParam(props, "sigma", 10.0));
 		params.setRate(getDoubleParam(props, "rate", 2));
@@ -1340,34 +1468,35 @@ public class SgdCrf {
 		params.setCandidatesNum(getIntParam(props, "candidatesNum", 10));
 		params.setSamplesNum(getIntParam(props, "samplesNum", 1000));
 		params.setT0(getDoubleParam(props, "t0", 0));
-		String templateFile=props.getProperty("templateFile");
+		String templateFile = props.getProperty("templateFile");
 		params.setTemplates(readTemplates(templateFile));
 		return params;
 	}
-	
-	public static List<String> readTemplates(String path) throws IOException{
-		BufferedReader br=null;
+
+	public static List<String> readTemplates(String path) throws IOException {
+		BufferedReader br = null;
 		try {
-			br=new BufferedReader(new InputStreamReader(new FileInputStream(path)));
-			List<String> lines=new ArrayList<String>();
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(
+					path)));
+			List<String> lines = new ArrayList<String>();
 			String line;
-			while((line=br.readLine())!=null){
-				line=line.trim();
-				if(line.startsWith("#")||line.equals("")){
+			while ((line = br.readLine()) != null) {
+				line = line.trim();
+				if (line.startsWith("#") || line.equals("")) {
 					continue;
 				}
 				lines.add(line);
 			}
 			return lines;
-		}finally{
-			if(br!=null){
+		} finally {
+			if (br != null) {
 				br.close();
 			}
 		}
 	}
-	
-	private static int shrinkAttributeDict(List<Instance> instances, int freqThreshold,
-			FeatureDict attributeDict) {
+
+	private static int shrinkAttributeDict(List<Instance> instances,
+			int freqThreshold, FeatureDict attributeDict) {
 		final int[] counter = new int[attributeDict.size()];
 		for (Instance instance : instances) {
 			int[] attrIds = instance.getAttrIds();
@@ -1385,7 +1514,7 @@ public class SgdCrf {
 				counter[oldAttrId] = -1;
 			}
 		}
- 
+
 		TObjectIntIterator<String> iter = attributeDict.iterator();
 		int removeNum = 0;
 		while (iter.hasNext()) {
@@ -1399,7 +1528,7 @@ public class SgdCrf {
 				iter.setValue(newAttrId);
 			}
 		}
-		
+
 		for (Instance instance : instances) {
 			int[] oldAttrIds = instance.getAttrIds();
 			for (int i = 0; i < oldAttrIds.length; ++i) {
@@ -1411,24 +1540,29 @@ public class SgdCrf {
 		}
 		return removeNum;
 	}
-	
-	private static int getIntParam(Properties props,String key,int defaultValue){
-		if(props.containsKey(key)){
+
+	private static int getIntParam(Properties props, String key,
+			int defaultValue) {
+		if (props.containsKey(key)) {
 			return Integer.valueOf(props.getProperty(key));
-		}else{
+		} else {
 			return defaultValue;
 		}
 	}
-	
-	private static double getDoubleParam(Properties props, String key, double defaultValue){
-		if(props.containsKey(key)){
+
+	private static double getDoubleParam(Properties props, String key,
+			double defaultValue) {
+		if (props.containsKey(key)) {
 			return Double.valueOf(props.getProperty(key));
-		}else{
+		} else {
 			return defaultValue;
 		}
 	}
-	private static Instance buildInstance4Explanation(List<String> attributes, int itemNum, List<String> labels, Map<Integer,String> featureMap,
-			Template template,FeatureDict attributeDict,TObjectIntHashMap<String> labelDict) {
+
+	private static Instance buildInstance4Explanation(List<String> attributes,
+			int itemNum, List<String> labels, Map<Integer, String> featureMap,
+			Template template, FeatureDict attributeDict,
+			TObjectIntHashMap<String> labelDict) {
 		if (template != null) {
 			attributes = template.expandTemplate(attributes, itemNum);
 		}
@@ -1441,141 +1575,163 @@ public class SgdCrf {
 		}
 		for (int itemIndex = 0, attrIndex = 0; itemIndex < itemNum; itemIndex++) {
 			if (containsLabels) {
-				labelIds[itemIndex] = getLabelIndex(labelDict, labels.get(itemIndex), false);
+				labelIds[itemIndex] = getLabelIndex(labelDict,
+						labels.get(itemIndex), false);
 			}
 
 			for (int rowIndex = 0; rowIndex < rowSize; rowIndex++) {
-				attrIds[attrIndex] = getFeatureIndex(attributeDict, attributes.get(attrIndex), false);
-				featureMap.put(attrIds[attrIndex],attributes.get(attrIndex));
+				attrIds[attrIndex] = getFeatureIndex(attributeDict,
+						attributes.get(attrIndex), false);
+				featureMap.put(attrIds[attrIndex], attributes.get(attrIndex));
 				attrIndex++;
 			}
 		}
-		return containsLabels ? new Instance(attrIds, labelIds)
-				: new Instance(attrIds, itemNum);
+		return containsLabels ? new Instance(attrIds, labelIds) : new Instance(
+				attrIds, itemNum);
 	}
-	
-	
-	private static double[] computeStateScores4Explanation(Instance instance, boolean exp, FeatureWeightScore[][] details, Map<Integer,String> featureMap,
-			int labelNum,double[] attributeWeights) {
+
+	private static double[] computeStateScores4Explanation(Instance instance,
+			boolean exp, FeatureWeightScore[][] details,
+			Map<Integer, String> featureMap, int labelNum,
+			double[] attributeWeights) {
 		int itemNum = instance.length();
 		int rowSize = instance.rowSize();
 		int[] attrIds = instance.getAttrIds();
 		double[] stateScores = new double[itemNum * labelNum];
 
-		for (int itemIndex = 0; itemIndex < itemNum; itemIndex++) {			
+		for (int itemIndex = 0; itemIndex < itemNum; itemIndex++) {
 			for (int i = 0; i < rowSize; i++) {
 				int attributeIndex = attrIds[itemIndex * rowSize + i];
-				
+
 				if (attributeIndex >= 0) {
-				    for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {				    	
-					    stateScores[itemIndex * labelNum + labelIndex] += attributeWeights[attributeIndex * labelNum + labelIndex];
-					    String feature=featureMap.get(attributeIndex);
-					    details[itemIndex][labelIndex].features.add(feature);
-					    details[itemIndex][labelIndex].weights.add(attributeWeights[attributeIndex * labelNum + labelIndex]);
-				    }
+					for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
+						stateScores[itemIndex * labelNum + labelIndex] += attributeWeights[attributeIndex
+								* labelNum + labelIndex];
+						String feature = featureMap.get(attributeIndex);
+						details[itemIndex][labelIndex].features.add(feature);
+						details[itemIndex][labelIndex].weights
+								.add(attributeWeights[attributeIndex * labelNum
+										+ labelIndex]);
+					}
 				}
 			}
 		}
 		if (exp) {
 			for (int itemIndex = 0; itemIndex < itemNum; itemIndex++) {
 				for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-					double score = stateScores[itemIndex * labelNum + labelIndex];
-					stateScores[itemIndex * labelNum + labelIndex] = Math.exp(score);
+					double score = stateScores[itemIndex * labelNum
+							+ labelIndex];
+					stateScores[itemIndex * labelNum + labelIndex] = Math
+							.exp(score);
 				}
 			}
 		}
 		for (int itemIndex = 0; itemIndex < itemNum; itemIndex++) {
 			for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-				details[itemIndex][labelIndex].score=stateScores[itemIndex * labelNum + labelIndex];			
-				List<String> featureList=details[itemIndex][labelIndex].features;
-				List<Double> weightList=details[itemIndex][labelIndex].weights;
-				List<Object[]> sortHelper=new ArrayList<Object[]>(featureList.size());
-				for(int i=0;i<featureList.size();i++){
-					sortHelper.add(new Object[]{featureList.get(i),weightList.get(i)});
+				details[itemIndex][labelIndex].score = stateScores[itemIndex
+						* labelNum + labelIndex];
+				List<String> featureList = details[itemIndex][labelIndex].features;
+				List<Double> weightList = details[itemIndex][labelIndex].weights;
+				List<Object[]> sortHelper = new ArrayList<Object[]>(
+						featureList.size());
+				for (int i = 0; i < featureList.size(); i++) {
+					sortHelper.add(new Object[] { featureList.get(i),
+							weightList.get(i) });
 				}
-				Collections.sort(sortHelper, new Comparator<Object[]>(){
+				Collections.sort(sortHelper, new Comparator<Object[]>() {
 					@Override
 					public int compare(Object[] arg0, Object[] arg1) {
-						double w1=(Double)arg0[1];
-						double w2=(Double)arg1[1];
-						w1=Math.abs(w1);
-						w2=Math.abs(w2);
-						if(w1>=w2) return -1;
-						else return 1;
+						double w1 = (Double) arg0[1];
+						double w2 = (Double) arg1[1];
+						w1 = Math.abs(w1);
+						w2 = Math.abs(w2);
+						if (w1 >= w2)
+							return -1;
+						else
+							return 1;
 					}
-					
+
 				});
 				featureList.clear();
 				weightList.clear();
-				for(Object[] arr:sortHelper){
-					featureList.add((String)arr[0]);
-					weightList.add((Double)arr[1]);
+				for (Object[] arr : sortHelper) {
+					featureList.add((String) arr[0]);
+					weightList.add((Double) arr[1]);
 				}
 			}
 		}
 		return stateScores;
-	}	
-	
-	public static Explanation explain(String sen, CrfModel model){
-		List<String> features=new ArrayList<String>(sen.length());
-		for(int i=0;i<sen.length();i++){
-			features.add(sen.charAt(i)+"");
+	}
+
+	public static Explanation explain(String sen, CrfModel model) {
+		List<String> features = new ArrayList<String>(sen.length());
+		for (int i = 0; i < sen.length(); i++) {
+			features.add(sen.charAt(i) + "");
 		}
-		Explanation explanation= tagAndExplain(features, sen.length(), model);
-		explanation.tokens=features;
+		Explanation explanation = tagAndExplain(features, sen.length(), model);
+		explanation.tokens = features;
 		return explanation;
 	}
-	
-	public static Explanation tagAndExplain(List<String> features,int itemNum,CrfModel model){
-		double[] bosTransitionWeights=model.weights.getBosTransitionWeights();
-		double[] transitionWeights=model.weights.getTransitionWeights();
-		double[] eosTransitionWeights=model.weights.getEosTransitionWeights();
-		double[] attributeWeights=model.weights.getAttributeWeights();
-		Template template=model.weights.getTemplate();
-		FeatureDict attributeDict=model.weights.getAttributeDict();
-		TObjectIntHashMap<String> labelDict=model.weights.getLabelDict();
-		Explanation result=new Explanation();
-		Map<Integer,String> featureMap=new HashMap<Integer,String>();
-		Instance instance=buildInstance4Explanation(features, itemNum, null, featureMap, template, attributeDict, labelDict);
-		
-		//codes copied from tagId(Instance instance)
+
+	public static Explanation tagAndExplain(List<String> features, int itemNum,
+			CrfModel model) {
+		double[] bosTransitionWeights = model.weights.getBosTransitionWeights();
+		double[] transitionWeights = model.weights.getTransitionWeights();
+		double[] eosTransitionWeights = model.weights.getEosTransitionWeights();
+		double[] attributeWeights = model.weights.getAttributeWeights();
+		Template template = model.weights.getTemplate();
+		FeatureDict attributeDict = model.weights.getAttributeDict();
+		TObjectIntHashMap<String> labelDict = model.weights.getLabelDict();
+		Explanation result = new Explanation();
+		Map<Integer, String> featureMap = new HashMap<Integer, String>();
+		Instance instance = buildInstance4Explanation(features, itemNum, null,
+				featureMap, template, attributeDict, labelDict);
+
+		// codes copied from tagId(Instance instance)
 		if (instance == null) {
-			result.bestTagIds=new int[0];
+			result.bestTagIds = new int[0];
 			return result;
 		}
 
 		int[] tagIndexes = new int[itemNum];
-		int labelNum=model.weights.getLabelDict().size();
-		FeatureWeightScore[][] details=new FeatureWeightScore[itemNum][];
-		for(int i=0;i<details.length;i++){
-			details[i]=new FeatureWeightScore[labelNum];
-			for(int j=0;j<details[i].length;j++){
-				details[i][j]=new FeatureWeightScore();
+		int labelNum = model.weights.getLabelDict().size();
+		FeatureWeightScore[][] details = new FeatureWeightScore[itemNum][];
+		for (int i = 0; i < details.length; i++) {
+			details[i] = new FeatureWeightScore[labelNum];
+			for (int j = 0; j < details[i].length; j++) {
+				details[i][j] = new FeatureWeightScore();
 			}
 		}
-		result.details=details;
-		double[] stateScores = computeStateScores4Explanation(instance, false, details,featureMap,labelNum,attributeWeights);
-		
+		result.details = details;
+		double[] stateScores = computeStateScores4Explanation(instance, false,
+				details, featureMap, labelNum, attributeWeights);
+
 		int[] bestBackIndexes = new int[itemNum * labelNum];
 
 		double[] bestScores = new double[itemNum * labelNum];
 		for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-			bestScores[labelIndex] = bosTransitionWeights[labelIndex] + stateScores[labelIndex];
+			bestScores[labelIndex] = bosTransitionWeights[labelIndex]
+					+ stateScores[labelIndex];
 		}
-		
+
 		for (int itemIndex = 1, itemMulIndex = labelNum; itemIndex < itemNum; itemIndex++, itemMulIndex += labelNum) {
 			for (int toLabelIndex = 0; toLabelIndex < labelNum; toLabelIndex++) {
-				double maxScore = bestScores[itemMulIndex - labelNum] + transitionWeights[toLabelIndex];;
+				double maxScore = bestScores[itemMulIndex - labelNum]
+						+ transitionWeights[toLabelIndex];
+				;
 				int maxFromLabelIndex = 0;
 				for (int fromLabelIndex = 1, fromLabelMulIndex = labelNum; fromLabelIndex < labelNum; fromLabelIndex++, fromLabelMulIndex += labelNum) {
-					double score = bestScores[itemMulIndex - labelNum + fromLabelIndex]
-							+ transitionWeights[fromLabelMulIndex + toLabelIndex];
+					double score = bestScores[itemMulIndex - labelNum
+							+ fromLabelIndex]
+							+ transitionWeights[fromLabelMulIndex
+									+ toLabelIndex];
 					if (score > maxScore) {
 						maxScore = score;
 						maxFromLabelIndex = fromLabelIndex;
 					}
 				}
-				bestScores[itemMulIndex + toLabelIndex] = maxScore + stateScores[itemMulIndex + toLabelIndex];
+				bestScores[itemMulIndex + toLabelIndex] = maxScore
+						+ stateScores[itemMulIndex + toLabelIndex];
 				bestBackIndexes[itemMulIndex + toLabelIndex] = maxFromLabelIndex;
 			}
 		}
@@ -1584,7 +1740,8 @@ public class SgdCrf {
 		double maxScore = bestScores[itemMulIndex] + eosTransitionWeights[0];
 		int maxFromLabelIndex = 0;
 		for (int labelIndex = 1; labelIndex < labelNum; labelIndex++) {
-			double score = bestScores[itemMulIndex + labelIndex] + eosTransitionWeights[labelIndex];
+			double score = bestScores[itemMulIndex + labelIndex]
+					+ eosTransitionWeights[labelIndex];
 			if (score > maxScore) {
 				maxScore = score;
 				maxFromLabelIndex = labelIndex;
@@ -1593,20 +1750,22 @@ public class SgdCrf {
 		tagIndexes[itemNum - 1] = maxFromLabelIndex;
 
 		for (int itemIndex = itemNum - 2; itemIndex >= 0; itemIndex--, itemMulIndex -= labelNum) {
-			maxFromLabelIndex = bestBackIndexes[itemMulIndex + maxFromLabelIndex];
+			maxFromLabelIndex = bestBackIndexes[itemMulIndex
+					+ maxFromLabelIndex];
 			tagIndexes[itemIndex] = maxFromLabelIndex;
 		}
-		
-		result.bestTagIds=tagIndexes;
-		result.bosTransitionWeights=bosTransitionWeights;
-		result.eosTransitionWeights=eosTransitionWeights;
-		result.transitionWeights=transitionWeights;
-		result.labelTexts=model.weights.getLabelTexts();
-		return result;		
+
+		result.bestTagIds = tagIndexes;
+		result.bosTransitionWeights = bosTransitionWeights;
+		result.eosTransitionWeights = eosTransitionWeights;
+		result.transitionWeights = transitionWeights;
+		result.labelTexts = model.weights.getLabelTexts();
+		return result;
 	}
-	
-	public static List<String[]> tagNBest(Instance instance,int N,double[] relativeScore,CrfModel model) {
-		List<String[]> result=new ArrayList<String[]>(N);
+
+	public static List<String[]> tagNBest(Instance instance, int N,
+			double[] relativeScore, CrfModel model) {
+		List<String[]> result = new ArrayList<String[]>(N);
 
 		if (instance == null) {
 			return result;
@@ -1614,25 +1773,27 @@ public class SgdCrf {
 		int itemNum = instance.length();
 
 		// compute state scores
-		int labelNum=model.weights.getLabelDict().size();
-		double[] attributeWeights=model.weights.getAttributeWeights();
-		double[] bosTransitionWeights=model.weights.getBosTransitionWeights();
-		double[] transitionWeights=model.weights.getTransitionWeights();
-		double[] eosTransitionWeights=model.weights.getEosTransitionWeights();
-		String[] labelTexts=model.weights.getLabelTexts();
-		double[] stateScores = computeStateScores(instance, false, labelNum, attributeWeights);
-		
+		int labelNum = model.weights.getLabelDict().size();
+		double[] attributeWeights = model.weights.getAttributeWeights();
+		double[] bosTransitionWeights = model.weights.getBosTransitionWeights();
+		double[] transitionWeights = model.weights.getTransitionWeights();
+		double[] eosTransitionWeights = model.weights.getEosTransitionWeights();
+		String[] labelTexts = model.weights.getLabelTexts();
+		double[] stateScores = computeStateScores(instance, false, labelNum,
+				attributeWeights);
+
 		int[][][][] backs = new int[itemNum][][][];
 
 		double[][][] scores = new double[itemNum][][];
 		scores[0] = new double[labelNum][];
-		for(int i=0;i<labelNum;i++){
-			scores[0][i]=new double[N];
+		for (int i = 0; i < labelNum; i++) {
+			scores[0][i] = new double[N];
 		}
 		for (int labelIndex = 0; labelIndex < labelNum; labelIndex++) {
-			scores[0][labelIndex][0] = stateScores[labelIndex]+bosTransitionWeights[labelIndex];
-			for(int i=1;i<N;i++){
-				scores[0][labelIndex][i]=-Double.MAX_VALUE;
+			scores[0][labelIndex][0] = stateScores[labelIndex]
+					+ bosTransitionWeights[labelIndex];
+			for (int i = 1; i < N; i++) {
+				scores[0][labelIndex][i] = -Double.MAX_VALUE;
 			}
 		}
 
@@ -1640,129 +1801,135 @@ public class SgdCrf {
 			scores[itemIndex] = new double[labelNum][];
 			backs[itemIndex] = new int[labelNum][][];
 			for (int toLabelIndex = 0; toLabelIndex < labelNum; toLabelIndex++) {
-				//double maxScore = -Double.MAX_VALUE;
-				//int maxFromLabelIndex = -1;
-				double[] nBest=new double[N];
-				int[][] nBestIndex=new int[N][2];
-				int curCount=0;
-				nBest[0]=-Double.MAX_VALUE;
-				
-				for (int fromLabelIndex = 0; fromLabelIndex < labelNum; fromLabelIndex++) {							
-					for(int i=0;i<N;i++){
-						if(scores[itemIndex-1][fromLabelIndex][i]==-Double.MAX_VALUE){
+				// double maxScore = -Double.MAX_VALUE;
+				// int maxFromLabelIndex = -1;
+				double[] nBest = new double[N];
+				int[][] nBestIndex = new int[N][2];
+				int curCount = 0;
+				nBest[0] = -Double.MAX_VALUE;
+
+				for (int fromLabelIndex = 0; fromLabelIndex < labelNum; fromLabelIndex++) {
+					for (int i = 0; i < N; i++) {
+						if (scores[itemIndex - 1][fromLabelIndex][i] == -Double.MAX_VALUE) {
 							break;
 						}
 						double score = scores[itemIndex - 1][fromLabelIndex][i]
-						         							+ transitionWeights[fromLabelIndex*labelNum+toLabelIndex];
-						
-						if(curCount<N || score>nBest[N-1]){							
-							int j=0;
-							for(;j<N;j++){
-								if(score>nBest[j]) break;
+								+ transitionWeights[fromLabelIndex * labelNum
+										+ toLabelIndex];
+
+						if (curCount < N || score > nBest[N - 1]) {
+							int j = 0;
+							for (; j < N; j++) {
+								if (score > nBest[j])
+									break;
 							}
-							
-							for(int k=N-1;k>j;k--){
-								nBest[k]=nBest[k-1];
-								nBestIndex[k]=nBestIndex[k-1];
+
+							for (int k = N - 1; k > j; k--) {
+								nBest[k] = nBest[k - 1];
+								nBestIndex[k] = nBestIndex[k - 1];
 							}
-							nBest[j]=score;
-							nBestIndex[j]=new int[]{fromLabelIndex,i};
+							nBest[j] = score;
+							nBestIndex[j] = new int[] { fromLabelIndex, i };
 							curCount++;
 						}
-						
+
 					}
 
-					
 				}
-				for(int i=0;i<curCount&&i<N;i++){
-					nBest[i]+=stateScores[itemIndex*labelNum+toLabelIndex];
+				for (int i = 0; i < curCount && i < N; i++) {
+					nBest[i] += stateScores[itemIndex * labelNum + toLabelIndex];
 				}
-				scores[itemIndex][toLabelIndex]=nBest;
-				backs[itemIndex][toLabelIndex]=nBestIndex;
+				scores[itemIndex][toLabelIndex] = nBest;
+				backs[itemIndex][toLabelIndex] = nBestIndex;
 			}
 		}
-		
-		List<Object[]> helper=new ArrayList<Object[]>();
-		for(int i=0;i<labelNum;i++){
-			double[] score=scores[itemNum-1][i];
-			for(int j=0;j<N;j++){
-				double s=score[j];
-				if(s==-Double.MAX_VALUE) break;
+
+		List<Object[]> helper = new ArrayList<Object[]>();
+		for (int i = 0; i < labelNum; i++) {
+			double[] score = scores[itemNum - 1][i];
+			for (int j = 0; j < N; j++) {
+				double s = score[j];
+				if (s == -Double.MAX_VALUE)
+					break;
 				s = s + eosTransitionWeights[i];
-				
-				Object[] arr=new Object[]{s,i,j};
+
+				Object[] arr = new Object[] { s, i, j };
 				helper.add(arr);
 			}
 		}
-		Collections.sort(helper, new Comparator<Object[]>(){
+		Collections.sort(helper, new Comparator<Object[]>() {
 			@Override
 			public int compare(Object[] arg0, Object[] arg1) {
-				double s1=(Double)arg0[0];
-				double s2=(Double)arg1[0];
-				if(s1>=s2) return -1;
-				else return 1;
+				double s1 = (Double) arg0[0];
+				double s2 = (Double) arg1[0];
+				if (s1 >= s2)
+					return -1;
+				else
+					return 1;
 			}
-			
+
 		});
-		
+
 		int[] tmp;
-		for(int i=0;i<N;i++){
+		for (int i = 0; i < N; i++) {
 			String[] tags = new String[itemNum];
-			Object[] arr=helper.get(i);
-			int j=(Integer)arr[1];
-			int k=(Integer)arr[2];
-			tags[itemNum-1]=labelTexts[j];
-			relativeScore[i]=(Double)arr[0];
+			Object[] arr = helper.get(i);
+			int j = (Integer) arr[1];
+			int k = (Integer) arr[2];
+			tags[itemNum - 1] = labelTexts[j];
+			relativeScore[i] = (Double) arr[0];
 			for (int itemIndex = itemNum - 2; itemIndex >= 0; itemIndex--) {
 				tmp = backs[itemIndex + 1][j][k];
-				j=tmp[0];
-				k=tmp[1];
-				tags[itemIndex] = labelTexts[j];				
+				j = tmp[0];
+				k = tmp[1];
+				tags[itemIndex] = labelTexts[j];
 			}
 			result.add(tags);
 		}
-		
-		
+
 		return result;
-	}	
-	
-	public static String[] tagId2Text(int[] tags,CrfModel model){
-		String[] labelTexts=model.weights.getLabelTexts();
-		String[] tagTexts=new String[tags.length];
-		for(int i=0;i<tags.length;i++){
-			tagTexts[i]=labelTexts[tags[i]];
+	}
+
+	public static String[] tagId2Text(int[] tags, CrfModel model) {
+		String[] labelTexts = model.weights.getLabelTexts();
+		String[] tagTexts = new String[tags.length];
+		for (int i = 0; i < tags.length; i++) {
+			tagTexts[i] = labelTexts[tags[i]];
 		}
 		return tagTexts;
 	}
-	
-	public static List<String> segment(String sentence,CrfModel model, TagConvertor tagConvertor){
-		List<String> attributes=new ArrayList<String>(sentence.length());
-		for(int i=0;i<sentence.length();i++){
-			attributes.add(sentence.charAt(i)+"");
+
+	public static List<String> segment(String sentence, CrfModel model,
+			TagConvertor tagConvertor) {
+		List<String> attributes = new ArrayList<String>(sentence.length());
+		for (int i = 0; i < sentence.length(); i++) {
+			attributes.add(sentence.charAt(i) + "");
 		}
-		Instance instance=buildInstance(attributes, attributes.size(), null, model.weights, false);
-		int[] tags=tagId(instance, model.weights);
-		
+		Instance instance = buildInstance(attributes, attributes.size(), null,
+				model.weights, false);
+		int[] tags = tagId(instance, model.weights);
+
 		return tagConvertor.tags2TokenList(tagId2Text(tags, model), sentence);
 	}
-	
-	public static List<String[]> segment(String sentence,CrfModel model, TagConvertor tagConvertor, int nBest){
-		List<String[]> result=new ArrayList<String[]>();
-		List<String> attributes=new ArrayList<String>(sentence.length());
-		for(int i=0;i<sentence.length();i++){
-			attributes.add(sentence.charAt(i)+"");
+
+	public static List<String[]> segment(String sentence, CrfModel model,
+			TagConvertor tagConvertor, int nBest) {
+		List<String[]> result = new ArrayList<String[]>();
+		List<String> attributes = new ArrayList<String>(sentence.length());
+		for (int i = 0; i < sentence.length(); i++) {
+			attributes.add(sentence.charAt(i) + "");
 		}
-		Instance instance=buildInstance(attributes, attributes.size(), null, model.weights, false);
-		double[] relativeScore=new double[nBest];
-		List<String[]> tags=tagNBest(instance, nBest, relativeScore, model);
-		for(String[] tag:tags){
+		Instance instance = buildInstance(attributes, attributes.size(), null,
+				model.weights, false);
+		double[] relativeScore = new double[nBest];
+		List<String[]> tags = tagNBest(instance, nBest, relativeScore, model);
+		for (String[] tag : tags) {
 			result.add(tagConvertor.tags2Tokens(tag, sentence));
 		}
 		return result;
 	}
-	
-	
-	public static void main(String[] args) throws Exception{
+
+	public static void main(String[] args) throws Exception {
 		if (args.length < 1) {
 			showUsageAndExit();
 		}
@@ -1770,116 +1937,132 @@ public class SgdCrf {
 		if (command.equals("help")) {
 			showUsageAndExit();
 		} else if (command.equals("train")) {
-			if (args.length != 4 && args.length!=5) {
+			if (args.length != 4 && args.length != 5) {
 				showUsageAndExit();
 			}
 			String trainFilename = args[1];
 			String modelFilename = args[2];
 			String configFilename = args[3];
-			
+
 			String charset = "UTF8";
-			if(args.length>4){
-				charset=args[4];
+			if (args.length > 4) {
+				charset = args[4];
 			}
-			
-			TrainingParams params=loadParams(configFilename);
-			Template template=new Template(params.getTemplates().toArray(new String[0]));
-			TrainingWeights weights=new TrainingWeights(template,FeatureDictEnum.TROVE_HASHMAP);
-			TrainingDataSet dataSet=SgdCrf.readTrainingData(trainFilename, charset, weights, params.getMinFeatureFreq());
-			SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights);
-			dataSet=null;//free memory
+
+			TrainingParams params = loadParams(configFilename);
+			Template template = new Template(params.getTemplates().toArray(
+					new String[0]));
+			TrainingWeights weights = new TrainingWeights(template,
+					FeatureDictEnum.TROVE_HASHMAP);
+			TrainingDataSet dataSet = SgdCrf.readTrainingData(trainFilename,
+					charset, weights, params.getMinFeatureFreq());
+			SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights,
+					new PrintTrainingProgress());
+			dataSet = null;// free memory
 			SgdCrf.saveModel(params, weights, modelFilename);
-			//SgdCrf.train(dataSet, validateNum, iterationNum, param, model);
-		} else if(command.equals("train2")){
-			if (args.length != 4 && args.length!=5) {
+			// SgdCrf.train(dataSet, validateNum, iterationNum, param, model);
+		} else if (command.equals("train2")) {
+			if (args.length != 4 && args.length != 5) {
 				showUsageAndExit();
 			}
 			String trainFilename = args[1];
 			String modelFilename = args[2];
 			String configFilename = args[3];
-			
+
 			String charset = "UTF8";
-			if(args.length>4){
-				charset=args[4];
+			if (args.length > 4) {
+				charset = args[4];
 			}
-			
-			TrainingParams params=loadParams(configFilename);
-			Template template=new Template(params.getTemplates().toArray(new String[0]));
-			TrainingWeights weights=new TrainingWeights(template,FeatureDictEnum.TROVE_HASHMAP);
-			TagConvertor tc=new BESB1B2MTagConvertor();
-			TrainingDataSet dataSet=SgdCrf.readTrainingData2(trainFilename, charset, weights, params.getMinFeatureFreq(),tc);
-			SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights);
-			dataSet=null;
+
+			TrainingParams params = loadParams(configFilename);
+			Template template = new Template(params.getTemplates().toArray(
+					new String[0]));
+			TrainingWeights weights = new TrainingWeights(template,
+					FeatureDictEnum.TROVE_HASHMAP);
+			TagConvertor tc = new BESB1B2MTagConvertor();
+			TrainingDataSet dataSet = SgdCrf.readTrainingData2(trainFilename,
+					charset, weights, params.getMinFeatureFreq(), tc);
+			SgdCrf.train(dataSet, 0, params.getIterationNum(), params, weights,
+					new PrintTrainingProgress());
+			dataSet = null;
 			SgdCrf.saveModel(params, weights, modelFilename);
 		}
-//		else if(command.equals("train-hdfs")){
-//			if(!(args.length>=4)){
-//				showUsageAndExit();
-//			}
-//			String trainFilename = args[1];
-//			String modelFilename = args[2];
-//			String configFilename = args[3];
-//			
-//			String charset = "UTF8";
-//			if(args.length>4){
-//				charset=args[4];
-//			}
-//			
-//			Configuration conf = new Configuration();
-//			for(int i=5;i<args.length;i++){
-//				System.out.println("add hdfs conf: "+args[i]);
-//				conf.addResource(new Path(args[i]));
-//			}
-//			
-//			FileSystem fs = FileSystem.get(conf);
-//			TrainingParams params=loadParams(configFilename);
-//			Template template=new Template(params.getTemplates().toArray(new String[0]));
-//			TagConvertor tc=new BESB1B2MTagConvertor();
-//			TrainingWeights weights=new TrainingWeights(template,FeatureDictEnum.TROVE_HASHMAP);
-//			SgdCrf.genFeatureDictAndInstances(fs, trainFilename, 0, template, params.getIterationNum(), params, tc, charset, weights, FeatureDictEnum.TROVE_HASHMAP, "./dict","./instances");
-//			
-//		}
-		else if(command.equals("train-hdfs")){
-			if(!(args.length>=5)){
+		// else if(command.equals("train-hdfs")){
+		// if(!(args.length>=4)){
+		// showUsageAndExit();
+		// }
+		// String trainFilename = args[1];
+		// String modelFilename = args[2];
+		// String configFilename = args[3];
+		//
+		// String charset = "UTF8";
+		// if(args.length>4){
+		// charset=args[4];
+		// }
+		//
+		// Configuration conf = new Configuration();
+		// for(int i=5;i<args.length;i++){
+		// System.out.println("add hdfs conf: "+args[i]);
+		// conf.addResource(new Path(args[i]));
+		// }
+		//
+		// FileSystem fs = FileSystem.get(conf);
+		// TrainingParams params=loadParams(configFilename);
+		// Template template=new Template(params.getTemplates().toArray(new
+		// String[0]));
+		// TagConvertor tc=new BESB1B2MTagConvertor();
+		// TrainingWeights weights=new
+		// TrainingWeights(template,FeatureDictEnum.TROVE_HASHMAP);
+		// SgdCrf.genFeatureDictAndInstances(fs, trainFilename, 0, template,
+		// params.getIterationNum(), params, tc, charset, weights,
+		// FeatureDictEnum.TROVE_HASHMAP, "./dict","./instances");
+		//
+		// }
+		else if (command.equals("train-hdfs")) {
+			if (!(args.length >= 5)) {
 				showUsageAndExit();
 			}
 			String trainFilename = args[1];
 			String modelFilename = args[2];
 			String configFilename = args[3];
-			String featureFilename=args[4];
-			
+			String featureFilename = args[4];
+
 			String charset = "UTF8";
-			if(args.length>5){
-				charset=args[5];
+			if (args.length > 5) {
+				charset = args[5];
 			}
-			
+
 			Configuration conf = new Configuration();
-			for(int i=6;i<args.length;i++){
-				System.out.println("add hdfs conf: "+args[i]);
+			for (int i = 6; i < args.length; i++) {
+				System.out.println("add hdfs conf: " + args[i]);
 				conf.addResource(new Path(args[i]));
 			}
-			
+
 			FileSystem fs = FileSystem.get(conf);
-			TrainingParams params=loadParams(configFilename);
-			Template template=new Template(params.getTemplates().toArray(new String[0]));
-			TagConvertor tc=new BESB1B2MTagConvertor();
-			TrainingWeights weights=new TrainingWeights(template);
-			//SgdCrf.train(fs, trainFilename, 0, template, params.getIterationNum(), params, tc, charset, weights, FeatureDictEnum.TROVE_HASHMAP, "./dict","./instances");
-			FSTObjectInput foi=null;
-			FeatureDict dict=null;
-			System.out.println("load featuredict from: "+featureFilename);
-			try{
-				foi=new FSTObjectInput(new FileInputStream(featureFilename));
-				dict=(FeatureDict) foi.readObject();
-				
-			}finally{
-				if(foi!=null){
+			TrainingParams params = loadParams(configFilename);
+			Template template = new Template(params.getTemplates().toArray(
+					new String[0]));
+			TagConvertor tc = new BESB1B2MTagConvertor();
+			TrainingWeights weights = new TrainingWeights(template);
+			// SgdCrf.train(fs, trainFilename, 0, template,
+			// params.getIterationNum(), params, tc, charset, weights,
+			// FeatureDictEnum.TROVE_HASHMAP, "./dict","./instances");
+			FSTObjectInput foi = null;
+			FeatureDict dict = null;
+			System.out.println("load featuredict from: " + featureFilename);
+			try {
+				foi = new FSTObjectInput(new FileInputStream(featureFilename));
+				dict = (FeatureDict) foi.readObject();
+
+			} finally {
+				if (foi != null) {
 					foi.close();
 				}
 			}
-			SgdCrf.train(fs, trainFilename, template, params.getIterationNum(), params, tc, charset, weights, dict);
+			SgdCrf.train(fs, trainFilename, template, params.getIterationNum(),
+					params, tc, charset, weights, dict);
 		}
-		
+
 		else if (command.equals("test")) {
 			if (args.length != 3 && args.length != 4) {
 				showUsageAndExit();
@@ -1890,12 +2073,13 @@ public class SgdCrf {
 			if (args.length > 3) {
 				charset = args[3];
 			}
-			
-			CrfModel model=SgdCrf.loadModel(modelFilename);
-			List<Instance> instances=SgdCrf.readTestData(testFilename, charset, model.weights);
-			EvaluationResult er=SgdCrf.evaluate(instances, model.weights);
+
+			CrfModel model = SgdCrf.loadModel(modelFilename);
+			List<Instance> instances = SgdCrf.readTestData(testFilename,
+					charset, model.weights);
+			EvaluationResult er = SgdCrf.evaluate(instances, model.weights);
 			System.out.println(er);
-		}else if(command.equals("test2")){
+		} else if (command.equals("test2")) {
 			if (args.length != 3 && args.length != 4) {
 				showUsageAndExit();
 			}
@@ -1905,52 +2089,60 @@ public class SgdCrf {
 			if (args.length > 3) {
 				charset = args[3];
 			}
-			
-			CrfModel model=SgdCrf.loadModel(modelFilename);
-			List<Instance> instances=SgdCrf.readTestData2(testFilename, charset, model.weights, new BESB1B2MTagConvertor());
-			EvaluationResult er=SgdCrf.evaluate(instances, model.weights);
+
+			CrfModel model = SgdCrf.loadModel(modelFilename);
+
+			// List<Instance> instances=SgdCrf.readTestData2(testFilename,
+			// charset, model.weights, new BESB1B2MTagConvertor());
+			// EvaluationResult er=SgdCrf.evaluate(instances, model.weights);
+			EvaluationResult er = SgdCrf.readAndEvaluate(testFilename, charset,
+					model.weights, new BESB1B2MTagConvertor());
 			System.out.println(er);
-		}
-		else if(command.equals("seg")){
-			if (args.length != 3 && args.length != 2 && args.length!=4) {
+		} else if (command.equals("seg")) {
+			if (args.length != 3 && args.length != 2 && args.length != 4) {
 				showUsageAndExit();
 			}
 			String modelFilename = args[1];
 			String charset = "";
-			int nBest=1;
-			if(args.length>2){
-				nBest=Integer.valueOf(args[2]);
+			int nBest = 1;
+			if (args.length > 2) {
+				nBest = Integer.valueOf(args[2]);
 			}
 			if (args.length > 3) {
 				charset = args[3];
 			}
-			CrfModel model=SgdCrf.loadModel(modelFilename);
+			CrfModel model = SgdCrf.loadModel(modelFilename);
 			BufferedReader br;
 			BufferedWriter bw;
-			if(charset.equals("")){
-				br=new BufferedReader(new InputStreamReader(System.in));
-				bw=new BufferedWriter(new OutputStreamWriter(System.out));
-			}else{
-				br=new BufferedReader(new InputStreamReader(System.in,charset));
-				bw=new BufferedWriter(new OutputStreamWriter(System.out,charset));
+			if (charset.equals("")) {
+				br = new BufferedReader(new InputStreamReader(System.in));
+				bw = new BufferedWriter(new OutputStreamWriter(System.out));
+			} else {
+				br = new BufferedReader(new InputStreamReader(System.in,
+						charset));
+				bw = new BufferedWriter(new OutputStreamWriter(System.out,
+						charset));
 			}
-			
+
 			String line;
 			bw.write("Enter Chinese sentences to be segment, enter quit to exit!\n");
 			bw.flush();
-			TagConvertor tc=new BESB1B2MTagConvertor();
-			while((line=br.readLine())!=null){
-				if(line.trim().equals("quit")){
+			TagConvertor tc = new BESB1B2MTagConvertor();
+			while ((line = br.readLine()) != null) {
+				if (line.trim().equals("quit")) {
 					break;
 				}
-				bw.write("Input: "+line+"\n");
-				if(nBest<2){
-					List<String> result=SgdCrf.segment(line, model, tc);
-					boolean isFirst=true;
-					for(String word:result){
-						if(isFirst){
-							isFirst=false;
-						}else{
+				if(line.trim().equals("")){
+					continue;
+				}
+				bw.write("Input: " + line + "\n");
+				if (nBest < 2) {
+					List<String> result = SgdCrf.segment(line, model, tc);
+					boolean isFirst = true;
+					for (String word : result) {
+						if (isFirst) {
+							isFirst = false;
+						} else {
 							bw.write("\t");
 						}
 						bw.write(word);
@@ -1958,15 +2150,16 @@ public class SgdCrf {
 					bw.write("\n");
 					bw.write("Enter Chinese sentences to be segment, enter quit to exit!\n");
 					bw.flush();
-				}else{
-					List<String[]> result=SgdCrf.segment(line, model, tc, nBest);
-					
-					for(String[] tks:result){
-						boolean isFirst=true;
-						for(String word:tks){
-							if(isFirst){
-								isFirst=false;
-							}else{
+				} else {
+					List<String[]> result = SgdCrf.segment(line, model, tc,
+							nBest);
+
+					for (String[] tks : result) {
+						boolean isFirst = true;
+						for (String word : tks) {
+							if (isFirst) {
+								isFirst = false;
+							} else {
 								bw.write("\t");
 							}
 							bw.write(word);
@@ -1979,7 +2172,7 @@ public class SgdCrf {
 			}
 			br.close();
 			bw.close();
-		}else {
+		} else {
 			System.err.println("unknown command: " + command);
 			showUsageAndExit();
 		}
