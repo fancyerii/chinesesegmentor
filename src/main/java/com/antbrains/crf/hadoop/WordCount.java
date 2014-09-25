@@ -28,60 +28,57 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
- 	
+
 public class WordCount {
 
-	public static class TokenizerMapper extends
-			Mapper<Object, Text, Text, LongWritable> {
+  public static class TokenizerMapper extends Mapper<Object, Text, Text, LongWritable> {
 
-		private final static LongWritable one = new LongWritable(1);
-		private Text word = new Text();
+    private final static LongWritable one = new LongWritable(1);
+    private Text word = new Text();
 
-		public void map(Object key, Text value, Context context)
-				throws IOException, InterruptedException {
-			String text = StringTools.transformTextToUTF8(value, "GBK");
-			text=StringTools.normalizeQuery(text);
-			String[] words=text.split("\t");
-			
-			for(String w:words){
-				word.set(w);
-				context.write(word, one);
-			}
-		}
-	}
+    public void map(Object key, Text value, Context context) throws IOException,
+        InterruptedException {
+      String text = StringTools.transformTextToUTF8(value, "GBK");
+      text = StringTools.normalizeQuery(text);
+      String[] words = text.split("\t");
 
-	public static class IntSumReducer extends
-			Reducer<Text, LongWritable, Text, LongWritable> {
-		private LongWritable result = new LongWritable();
+      for (String w : words) {
+        word.set(w);
+        context.write(word, one);
+      }
+    }
+  }
 
-		public void reduce(Text key, Iterable<LongWritable> values,
-				Context context) throws IOException, InterruptedException {
-			long sum = 0;
-			for (LongWritable val : values) {
-				sum += val.get();
-			}
-			result.set(sum);
-			context.write(key, result);
-		}
-	}
+  public static class IntSumReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
+    private LongWritable result = new LongWritable();
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args)
-				.getRemainingArgs();
-		if (otherArgs.length != 2) {
-			System.err.println("Usage: wordcount <in> <out>");
-			System.exit(2);
-		}
-		Job job = new Job(conf, "word count");
-		job.setJarByClass(WordCount.class);
-		job.setMapperClass(TokenizerMapper.class);
-		job.setCombinerClass(IntSumReducer.class);
-		job.setReducerClass(IntSumReducer.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(LongWritable.class);
-		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
-	}
+    public void reduce(Text key, Iterable<LongWritable> values, Context context)
+        throws IOException, InterruptedException {
+      long sum = 0;
+      for (LongWritable val : values) {
+        sum += val.get();
+      }
+      result.set(sum);
+      context.write(key, result);
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if (otherArgs.length != 2) {
+      System.err.println("Usage: wordcount <in> <out>");
+      System.exit(2);
+    }
+    Job job = new Job(conf, "word count");
+    job.setJarByClass(WordCount.class);
+    job.setMapperClass(TokenizerMapper.class);
+    job.setCombinerClass(IntSumReducer.class);
+    job.setReducerClass(IntSumReducer.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(LongWritable.class);
+    FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+    FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
 }

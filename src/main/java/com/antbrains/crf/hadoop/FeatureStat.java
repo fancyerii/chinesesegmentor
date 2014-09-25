@@ -42,124 +42,121 @@ import com.antbrains.crf.Template;
 
 public class FeatureStat {
 
-	public static class CounterMapper extends
-			Mapper<Object, Text, Text, LongWritable> {
+  public static class CounterMapper extends Mapper<Object, Text, Text, LongWritable> {
 
-		private TObjectLongHashMap<String> counter;
-		private int batchSize=100000;
-		@Override
-		protected void setup(Context context) throws IOException,
-				InterruptedException {
-			counter=new TObjectLongHashMap<String>();
-		}
-		
-		@Override 
-		protected void cleanup(final Context context) throws IOException,
-		InterruptedException {
-			counter.forEachEntry(new TObjectLongProcedure<String>() {
+    private TObjectLongHashMap<String> counter;
+    private int batchSize = 100000;
 
-				@Override
-				public boolean execute(String k, long v) {
-					try {
-						context.write(new Text(k), new LongWritable(v));
-					} catch (Exception e) {
-						e.printStackTrace();
-					} 
-					return true;
-				}
-			});
-				
-			counter.clear();
-		}
-		@Override 
-		public void map(Object key, Text value, final Context context)
-				throws IOException, InterruptedException {
-			String[] arr=value.toString().split("\t");
-			if(arr.length!=2){
-				return;
-			}
-			long c=Long.valueOf(arr[1]);
-			if(c<0){
-				//
-				c+=Integer.MAX_VALUE;//overfloat
-			}
-			String f=arr[0].split(":")[0];
-			String k=String.format("%s-%010d", f, c);
-			
-			long count=counter.get(k);
-			counter.put(k, count+1);
-			
-			if(c<80){
-				String ck="freq-"+c;
-				context.getCounter(FeatureStat.class.getName(), ck).increment(1);
-			}else if(c<1000){
-				String ck="freq-80-1k";
-				context.getCounter(FeatureStat.class.getName(), ck).increment(1);
-			}else if(c<10000){
-				String ck="freq-1k-10k";
-				context.getCounter(FeatureStat.class.getName(), ck).increment(1);
-			}else if(c<100000){
-				String ck="freq-10k-100k";
-				context.getCounter(FeatureStat.class.getName(), ck).increment(1);
-			}else{
-				String ck="freq-100k-";
-				context.getCounter(FeatureStat.class.getName(), ck).increment(1);
-			}
-			
-			if(counter.size()>=batchSize){
-				counter.forEachEntry(new TObjectLongProcedure<String>() {
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+      counter = new TObjectLongHashMap<String>();
+    }
 
-					@Override
-					public boolean execute(String k, long v) {
-						try {
-							context.write(new Text(k), new LongWritable(v));
-						} catch (Exception e) {
-							e.printStackTrace();
-						} 
-						return true;
-					}
-				});
-					
-				counter.clear();
-			}
-		}
-	}
+    @Override
+    protected void cleanup(final Context context) throws IOException, InterruptedException {
+      counter.forEachEntry(new TObjectLongProcedure<String>() {
 
-	public static class IntSumReducer extends
-			Reducer<Text, LongWritable, Text, LongWritable> {
-		private LongWritable result = new LongWritable();
-		@Override 
-		public void reduce(Text key, Iterable<LongWritable> values,
-				Context context) throws IOException, InterruptedException {
-			long sum = 0;
-			for (LongWritable val : values) {
-				sum += val.get();
-			}
-			result.set(sum);
-			context.write(key, result);
-		}
-	}
-	
+        @Override
+        public boolean execute(String k, long v) {
+          try {
+            context.write(new Text(k), new LongWritable(v));
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+          return true;
+        }
+      });
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args)
-				.getRemainingArgs();
-		if (otherArgs.length != 2) {
-			System.err.println("Usage: wordcount <in> <out> ");
-			System.exit(2);
-		}
-		
-		Job job = new Job(conf, FeatureStat.class.getSimpleName());
+      counter.clear();
+    }
 
-		job.setJarByClass(FeatureStat.class);
-		job.setMapperClass(CounterMapper.class);
-		job.setCombinerClass(IntSumReducer.class);
-		job.setReducerClass(IntSumReducer.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(LongWritable.class);
-		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
-	}
+    @Override
+    public void map(Object key, Text value, final Context context) throws IOException,
+        InterruptedException {
+      String[] arr = value.toString().split("\t");
+      if (arr.length != 2) {
+        return;
+      }
+      long c = Long.valueOf(arr[1]);
+      if (c < 0) {
+        //
+        c += Integer.MAX_VALUE;// overfloat
+      }
+      String f = arr[0].split(":")[0];
+      String k = String.format("%s-%010d", f, c);
+
+      long count = counter.get(k);
+      counter.put(k, count + 1);
+
+      if (c < 80) {
+        String ck = "freq-" + c;
+        context.getCounter(FeatureStat.class.getName(), ck).increment(1);
+      } else if (c < 1000) {
+        String ck = "freq-80-1k";
+        context.getCounter(FeatureStat.class.getName(), ck).increment(1);
+      } else if (c < 10000) {
+        String ck = "freq-1k-10k";
+        context.getCounter(FeatureStat.class.getName(), ck).increment(1);
+      } else if (c < 100000) {
+        String ck = "freq-10k-100k";
+        context.getCounter(FeatureStat.class.getName(), ck).increment(1);
+      } else {
+        String ck = "freq-100k-";
+        context.getCounter(FeatureStat.class.getName(), ck).increment(1);
+      }
+
+      if (counter.size() >= batchSize) {
+        counter.forEachEntry(new TObjectLongProcedure<String>() {
+
+          @Override
+          public boolean execute(String k, long v) {
+            try {
+              context.write(new Text(k), new LongWritable(v));
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+            return true;
+          }
+        });
+
+        counter.clear();
+      }
+    }
+  }
+
+  public static class IntSumReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
+    private LongWritable result = new LongWritable();
+
+    @Override
+    public void reduce(Text key, Iterable<LongWritable> values, Context context)
+        throws IOException, InterruptedException {
+      long sum = 0;
+      for (LongWritable val : values) {
+        sum += val.get();
+      }
+      result.set(sum);
+      context.write(key, result);
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if (otherArgs.length != 2) {
+      System.err.println("Usage: wordcount <in> <out> ");
+      System.exit(2);
+    }
+
+    Job job = new Job(conf, FeatureStat.class.getSimpleName());
+
+    job.setJarByClass(FeatureStat.class);
+    job.setMapperClass(CounterMapper.class);
+    job.setCombinerClass(IntSumReducer.class);
+    job.setReducerClass(IntSumReducer.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(LongWritable.class);
+    FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+    FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
 }

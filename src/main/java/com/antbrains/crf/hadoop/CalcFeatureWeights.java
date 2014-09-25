@@ -67,139 +67,136 @@ import com.google.gson.Gson;
 
 public class CalcFeatureWeights {
 
-	public static class CalcFeatureMapper extends Mapper<Text, DoubleWritable, IntWritable, MyKey> {
-		@Override
-		public void map(Text key,  DoubleWritable value, final Context context)
-				throws IOException, InterruptedException {
-			String s=key.toString();
-			if(!s.startsWith(TrainingMapper.FEATURE_WEIGHT)){
-				return;
-			}
-			
-			int idx=Integer.parseInt(s.substring(2));
-			int fId=idx/6;
-			MyKey mk=new MyKey(idx%6, value.get());
-			context.write(new IntWritable(fId),mk);
-		}
-	}
-	
-	public static class IdentityMapper extends Mapper<MyKey, MyValue, MyKey, MyValue> {
-		@Override
-		public void map(MyKey key,  MyValue value, final Context context)
-				throws IOException, InterruptedException {
-			context.write(key, value);
-		}
-	}
-	
-	public static class IdentityReducer extends Reducer<MyKey,MyValue,MyKey,MyValue> {
-		@Override
-		public void reduce(MyKey key,  Iterable<MyValue> values, final Context context)
-				throws IOException, InterruptedException {
-			for(MyValue value:values){
-				context.write(key, value);
-			}
-		}
-	}
+  public static class CalcFeatureMapper extends Mapper<Text, DoubleWritable, IntWritable, MyKey> {
+    @Override
+    public void map(Text key, DoubleWritable value, final Context context) throws IOException,
+        InterruptedException {
+      String s = key.toString();
+      if (!s.startsWith(TrainingMapper.FEATURE_WEIGHT)) {
+        return;
+      }
 
-	public static class CalcFeatureReducer extends Reducer<IntWritable, MyKey, MyKey, MyValue> {
-		@Override
-		protected void reduce(IntWritable key, Iterable<MyKey> values, Context context)
-				throws IOException, InterruptedException {
-			double w=0;
-			int total=0;
-			double[] array=new double[6];
-			for(MyKey value:values){
-				total++;
-				w+=value.score*value.score;
-				array[value.id]=value.score;
-			}
-			if(total!=6){
-				throw new IOException("not 6 for: "+key.get());
-			}
-			
-			MyKey k=new MyKey(key.get(), w);
-			MyValue v=new MyValue(array);
-			context.write(k, v);
-		}
-		
-	}
- 
+      int idx = Integer.parseInt(s.substring(2));
+      int fId = idx / 6;
+      MyKey mk = new MyKey(idx % 6, value.get());
+      context.write(new IntWritable(fId), mk);
+    }
+  }
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args)
-				.getRemainingArgs();
+  public static class IdentityMapper extends Mapper<MyKey, MyValue, MyKey, MyValue> {
+    @Override
+    public void map(MyKey key, MyValue value, final Context context) throws IOException,
+        InterruptedException {
+      context.write(key, value);
+    }
+  }
 
-		if (otherArgs.length != 3 && otherArgs.length!=4) {
-			System.err.println("CalcFeatureWeights <inDir> <tmpDir> <outDir> [startStep]");
-			System.exit(-1);
-		}
-		int startStep=1;
-		if(otherArgs.length==4){
-			startStep=Integer.valueOf(otherArgs[otherArgs.length-1]);
-		}
-		FileSystem fs = FileSystem.get(conf);
-		if(startStep<=1)
-		{
-			System.out.println("calc");
-			fs.delete(new Path(otherArgs[1]), true);
-			Job job = new Job(conf, CalcFeatureWeights.class.getSimpleName());
-			job.setNumReduceTasks(1);
-			job.setJarByClass(CalcFeatureWeights.class);
-			job.setMapperClass(CalcFeatureMapper.class);
-			job.setReducerClass(CalcFeatureReducer.class);
-			
-			job.setOutputFormatClass(SequenceFileOutputFormat.class);
-			
-			job.setInputFormatClass(SequenceFileInputFormat.class);
-			
-			job.setMapOutputKeyClass(IntWritable.class);
-			job.setMapOutputValueClass(MyKey.class);
-			
-			job.setOutputKeyClass(MyKey.class);
-			job.setOutputValueClass(MyValue.class);
-			FileInputFormat.setInputPaths(job, new Path(otherArgs[0]));
-			
-			FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		
-			boolean res=job.waitForCompletion(true);
-			if(!res){
-				System.err.println("step1 failed");
-				return;
-			}
-		}
-		
-		if(startStep<=2)
-		//sort
-		{
-			fs.delete(new Path(otherArgs[2]), true);
-			System.out.println("sort");
-			Job job = new Job(conf, CalcFeatureWeights.class.getSimpleName());
-			
-			job.setNumReduceTasks(1);
-			job.setJarByClass(CalcFeatureWeights.class);
-			job.setMapperClass(IdentityMapper.class);
-			job.setReducerClass(IdentityReducer.class);
-			
-			job.setOutputFormatClass(SequenceFileOutputFormat.class);
-			
-			job.setInputFormatClass(SequenceFileInputFormat.class);
-			
-			job.setMapOutputKeyClass(MyKey.class);
-			job.setMapOutputValueClass(MyValue.class);
-			job.setOutputKeyClass(MyKey.class);
-			job.setOutputValueClass(MyValue.class);
-			
-			FileInputFormat.setInputPaths(job, new Path(otherArgs[1]));
-			
-			FileOutputFormat.setOutputPath(job, new Path(otherArgs[2]));
-		
-			boolean res=job.waitForCompletion(true);
-			if(!res){
-				System.err.println("step2 failed");
-				return;
-			}
-		}
-		
-	}
+  public static class IdentityReducer extends Reducer<MyKey, MyValue, MyKey, MyValue> {
+    @Override
+    public void reduce(MyKey key, Iterable<MyValue> values, final Context context)
+        throws IOException, InterruptedException {
+      for (MyValue value : values) {
+        context.write(key, value);
+      }
+    }
+  }
+
+  public static class CalcFeatureReducer extends Reducer<IntWritable, MyKey, MyKey, MyValue> {
+    @Override
+    protected void reduce(IntWritable key, Iterable<MyKey> values, Context context)
+        throws IOException, InterruptedException {
+      double w = 0;
+      int total = 0;
+      double[] array = new double[6];
+      for (MyKey value : values) {
+        total++;
+        w += value.score * value.score;
+        array[value.id] = value.score;
+      }
+      if (total != 6) {
+        throw new IOException("not 6 for: " + key.get());
+      }
+
+      MyKey k = new MyKey(key.get(), w);
+      MyValue v = new MyValue(array);
+      context.write(k, v);
+    }
+
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+
+    if (otherArgs.length != 3 && otherArgs.length != 4) {
+      System.err.println("CalcFeatureWeights <inDir> <tmpDir> <outDir> [startStep]");
+      System.exit(-1);
+    }
+    int startStep = 1;
+    if (otherArgs.length == 4) {
+      startStep = Integer.valueOf(otherArgs[otherArgs.length - 1]);
+    }
+    FileSystem fs = FileSystem.get(conf);
+    if (startStep <= 1) {
+      System.out.println("calc");
+      fs.delete(new Path(otherArgs[1]), true);
+      Job job = new Job(conf, CalcFeatureWeights.class.getSimpleName());
+      job.setNumReduceTasks(1);
+      job.setJarByClass(CalcFeatureWeights.class);
+      job.setMapperClass(CalcFeatureMapper.class);
+      job.setReducerClass(CalcFeatureReducer.class);
+
+      job.setOutputFormatClass(SequenceFileOutputFormat.class);
+
+      job.setInputFormatClass(SequenceFileInputFormat.class);
+
+      job.setMapOutputKeyClass(IntWritable.class);
+      job.setMapOutputValueClass(MyKey.class);
+
+      job.setOutputKeyClass(MyKey.class);
+      job.setOutputValueClass(MyValue.class);
+      FileInputFormat.setInputPaths(job, new Path(otherArgs[0]));
+
+      FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+
+      boolean res = job.waitForCompletion(true);
+      if (!res) {
+        System.err.println("step1 failed");
+        return;
+      }
+    }
+
+    if (startStep <= 2)
+    // sort
+    {
+      fs.delete(new Path(otherArgs[2]), true);
+      System.out.println("sort");
+      Job job = new Job(conf, CalcFeatureWeights.class.getSimpleName());
+
+      job.setNumReduceTasks(1);
+      job.setJarByClass(CalcFeatureWeights.class);
+      job.setMapperClass(IdentityMapper.class);
+      job.setReducerClass(IdentityReducer.class);
+
+      job.setOutputFormatClass(SequenceFileOutputFormat.class);
+
+      job.setInputFormatClass(SequenceFileInputFormat.class);
+
+      job.setMapOutputKeyClass(MyKey.class);
+      job.setMapOutputValueClass(MyValue.class);
+      job.setOutputKeyClass(MyKey.class);
+      job.setOutputValueClass(MyValue.class);
+
+      FileInputFormat.setInputPaths(job, new Path(otherArgs[1]));
+
+      FileOutputFormat.setOutputPath(job, new Path(otherArgs[2]));
+
+      boolean res = job.waitForCompletion(true);
+      if (!res) {
+        System.err.println("step2 failed");
+        return;
+      }
+    }
+
+  }
 }

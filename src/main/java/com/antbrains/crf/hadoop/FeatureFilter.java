@@ -43,92 +43,88 @@ import com.antbrains.crf.SgdCrf;
 import com.antbrains.crf.Template;
 
 public class FeatureFilter {
-	
-	public static class CounterMapper extends
-			Mapper<Object, Text, Text, LongWritable> {
-		Map<String,Integer> filterMap=new HashMap<String,Integer>();
-		private boolean statOnly=true;
-		@Override
-		protected void setup(Context context) throws IOException,
-				InterruptedException {
-			String rules=context.getConfiguration().get("rules");
-			if(rules==null){
-				throw new IllegalArgumentException("need rules");
-			}
-			String[] lines=rules.split("\n");
-			for(String line:lines){
-				String[] arr=line.split("\\s+");
-				if(arr.length==2){
-					filterMap.put(arr[0], Integer.valueOf(arr[1]));
-				}
-			}
-			String s=context.getConfiguration().get("statOnly");
-			if(s.equalsIgnoreCase("false")){
-				statOnly=false;
-			}
-		}
-		
-		@Override 
-		protected void cleanup(final Context context) throws IOException,
-		InterruptedException {
-			
-		}
-		@Override 
-		public void map(Object key, Text value, final Context context)
-				throws IOException, InterruptedException {
-			String[] arr=value.toString().split("\t");
-			if(arr.length!=2){
-				return;
-			}
-			long c=Long.valueOf(arr[1]);
-			if(c<0){
-				context.getCounter(FeatureFilter.class.getSimpleName(), "old- "+c).increment(1);
-				//
-				c=(long)((int)c - Integer.MAX_VALUE) + Integer.MAX_VALUE;
-				context.getCounter(FeatureFilter.class.getSimpleName(), "new- "+c).increment(1);
-			}
-			String f=arr[0].split(":")[0];
-			Integer threshold=filterMap.get(f);
-			if(threshold!=null&&c<=threshold){
-				context.getCounter(FeatureFilter.class.getSimpleName(),"filter-"+f).increment(1);
-			}else{
-				if(!statOnly){
-					context.write(new Text(arr[0]), new LongWritable(c));
-				}
-				context.getCounter(FeatureFilter.class.getSimpleName(),"keep-"+f).increment(1);
-			}
-		}
-	}
-	
-	
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args)
-				.getRemainingArgs();
-		if (otherArgs.length != 4) {
-			System.err.println("Usage: wordcount <in> <out> filterRuleFile statOnly");
-			System.exit(-1);
-		}
-		
-		boolean statOnly=true;
-		if(otherArgs[3].equalsIgnoreCase("false")){
-			statOnly=false;
-		}
-		conf.set("statOnly", statOnly+"");
-		
-		String rules=FileTools.readFile(otherArgs[2], "UTF8");
-		conf.set("rules", rules);
-		conf.set("mapred.reduce.tasks", "0");
-		Job job = new Job(conf, FeatureFilter.class.getSimpleName());
+  public static class CounterMapper extends Mapper<Object, Text, Text, LongWritable> {
+    Map<String, Integer> filterMap = new HashMap<String, Integer>();
+    private boolean statOnly = true;
 
-		job.setJarByClass(FeatureFilter.class);
-		job.setMapperClass(CounterMapper.class);
-		
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(LongWritable.class);
-		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
-	}
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+      String rules = context.getConfiguration().get("rules");
+      if (rules == null) {
+        throw new IllegalArgumentException("need rules");
+      }
+      String[] lines = rules.split("\n");
+      for (String line : lines) {
+        String[] arr = line.split("\\s+");
+        if (arr.length == 2) {
+          filterMap.put(arr[0], Integer.valueOf(arr[1]));
+        }
+      }
+      String s = context.getConfiguration().get("statOnly");
+      if (s.equalsIgnoreCase("false")) {
+        statOnly = false;
+      }
+    }
+
+    @Override
+    protected void cleanup(final Context context) throws IOException, InterruptedException {
+
+    }
+
+    @Override
+    public void map(Object key, Text value, final Context context) throws IOException,
+        InterruptedException {
+      String[] arr = value.toString().split("\t");
+      if (arr.length != 2) {
+        return;
+      }
+      long c = Long.valueOf(arr[1]);
+      if (c < 0) {
+        context.getCounter(FeatureFilter.class.getSimpleName(), "old- " + c).increment(1);
+        //
+        c = (long) ((int) c - Integer.MAX_VALUE) + Integer.MAX_VALUE;
+        context.getCounter(FeatureFilter.class.getSimpleName(), "new- " + c).increment(1);
+      }
+      String f = arr[0].split(":")[0];
+      Integer threshold = filterMap.get(f);
+      if (threshold != null && c <= threshold) {
+        context.getCounter(FeatureFilter.class.getSimpleName(), "filter-" + f).increment(1);
+      } else {
+        if (!statOnly) {
+          context.write(new Text(arr[0]), new LongWritable(c));
+        }
+        context.getCounter(FeatureFilter.class.getSimpleName(), "keep-" + f).increment(1);
+      }
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if (otherArgs.length != 4) {
+      System.err.println("Usage: wordcount <in> <out> filterRuleFile statOnly");
+      System.exit(-1);
+    }
+
+    boolean statOnly = true;
+    if (otherArgs[3].equalsIgnoreCase("false")) {
+      statOnly = false;
+    }
+    conf.set("statOnly", statOnly + "");
+
+    String rules = FileTools.readFile(otherArgs[2], "UTF8");
+    conf.set("rules", rules);
+    conf.set("mapred.reduce.tasks", "0");
+    Job job = new Job(conf, FeatureFilter.class.getSimpleName());
+
+    job.setJarByClass(FeatureFilter.class);
+    job.setMapperClass(CounterMapper.class);
+
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(LongWritable.class);
+    FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+    FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
 }

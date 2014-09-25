@@ -38,124 +38,122 @@ import com.antbrains.crf.Template;
 
 public class FeatureCounter {
 
-	public static class CounterMapper extends
-			Mapper<Object, Text, Text, LongWritable> {
-		private Template template;
-		
-		private TObjectIntHashMap<String> counter;
-		private int batchSize=100000;
-		@Override
-		protected void setup(Context context) throws IOException,
-				InterruptedException {
-			Configuration conf = context.getConfiguration();
-			String s=conf.get("templates");
-			if(s==null) throw new IllegalArgumentException("templates is null");
-			template=new Template(str2StrArr(s));
-			counter=new TObjectIntHashMap<String>((int)(this.batchSize*1.25), 0.8f,0);
-		}
-		
-		@Override 
-		protected void cleanup(final Context context) throws IOException,
-		InterruptedException {
-			counter.forEachEntry(new TObjectIntProcedure<String>() {
-				@Override
-				public boolean execute(String text, int index) {
-					try {
-						context.write(new Text(text), new LongWritable(index));
-					} catch (Exception e) {
-						throw new RuntimeException(e);
-					} 
-					return true;
-				}
-			});
-			counter.clear();
-		}
-		@Override 
-		public void map(Object key, Text value, final Context context)
-				throws IOException, InterruptedException {
-			String sen=value.toString().replaceAll("\t", "");
-			sen=StringTools.normalizeQuery(sen);
-			List<String> attributes=new ArrayList<String>(sen.length());
-			for(int i=0;i<sen.length();i++){
-				attributes.add(sen.charAt(i)+"");
-			}
-			List<String> features=template.expandTemplate(attributes, attributes.size());
-			for(String feature:features){
-				if(feature.contains("_B-")||feature.contains("_B+")){
-					continue;
-				}
-				int count=counter.get(feature);
-				counter.put(feature, count+1);
-			}
-			
-			if(counter.size()>=batchSize){
-				counter.forEachEntry(new TObjectIntProcedure<String>() {
-					@Override
-					public boolean execute(String text, int index) {
-						try {
-							context.write(new Text(text), new LongWritable(index));
-						} catch (Exception e) {
-							throw new RuntimeException(e);
-						} 
-						return true;
-					}
-				});
-				counter.clear();
-			}
-		}
-	}
+  public static class CounterMapper extends Mapper<Object, Text, Text, LongWritable> {
+    private Template template;
 
-	public static class SumReducer extends
-			Reducer<Text, LongWritable, Text, LongWritable> {
-		private LongWritable result = new LongWritable();
-		@Override 
-		public void reduce(Text key, Iterable<LongWritable> values,
-				Context context) throws IOException, InterruptedException {
-			long sum = 0;
-			for (LongWritable val : values) {
-				sum += val.get();
-			}
-			result.set(sum);
-			context.write(key, result);
-		}
-	}
+    private TObjectIntHashMap<String> counter;
+    private int batchSize = 100000;
 
-	private static String[] str2StrArr(String s) {
-		return s.split("\n");
-	}
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      String s = conf.get("templates");
+      if (s == null)
+        throw new IllegalArgumentException("templates is null");
+      template = new Template(str2StrArr(s));
+      counter = new TObjectIntHashMap<String>((int) (this.batchSize * 1.25), 0.8f, 0);
+    }
 
-	private static String strArr2Str(String[] arr) {
-		StringBuilder sb = new StringBuilder("");
-		for (String s : arr) {
-			s = s.replaceAll("\n", "");
-			sb.append(s).append("\n");
-		}
-		return sb.toString();
-	}
+    @Override
+    protected void cleanup(final Context context) throws IOException, InterruptedException {
+      counter.forEachEntry(new TObjectIntProcedure<String>() {
+        @Override
+        public boolean execute(String text, int index) {
+          try {
+            context.write(new Text(text), new LongWritable(index));
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+          return true;
+        }
+      });
+      counter.clear();
+    }
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args)
-				.getRemainingArgs();
-		if (otherArgs.length != 3) {
-			System.err.println("Usage: wordcount <in> <out> <templatefile>");
-			System.exit(2);
-		}
+    @Override
+    public void map(Object key, Text value, final Context context) throws IOException,
+        InterruptedException {
+      String sen = value.toString().replaceAll("\t", "");
+      sen = StringTools.normalizeQuery(sen);
+      List<String> attributes = new ArrayList<String>(sen.length());
+      for (int i = 0; i < sen.length(); i++) {
+        attributes.add(sen.charAt(i) + "");
+      }
+      List<String> features = template.expandTemplate(attributes, attributes.size());
+      for (String feature : features) {
+        if (feature.contains("_B-") || feature.contains("_B+")) {
+          continue;
+        }
+        int count = counter.get(feature);
+        counter.put(feature, count + 1);
+      }
 
-		String[] templates = SgdCrf.readTemplates(otherArgs[2]).toArray(
-				new String[0]);
-		conf.set("templates", strArr2Str(templates));
+      if (counter.size() >= batchSize) {
+        counter.forEachEntry(new TObjectIntProcedure<String>() {
+          @Override
+          public boolean execute(String text, int index) {
+            try {
+              context.write(new Text(text), new LongWritable(index));
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+            return true;
+          }
+        });
+        counter.clear();
+      }
+    }
+  }
 
-		Job job = new Job(conf, FeatureCounter.class.getSimpleName());
+  public static class SumReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
+    private LongWritable result = new LongWritable();
 
-		job.setJarByClass(FeatureCounter.class);
-		job.setMapperClass(CounterMapper.class);
-		job.setCombinerClass(SumReducer.class);
-		job.setReducerClass(SumReducer.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(LongWritable.class);
-		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
-	}
+    @Override
+    public void reduce(Text key, Iterable<LongWritable> values, Context context)
+        throws IOException, InterruptedException {
+      long sum = 0;
+      for (LongWritable val : values) {
+        sum += val.get();
+      }
+      result.set(sum);
+      context.write(key, result);
+    }
+  }
+
+  private static String[] str2StrArr(String s) {
+    return s.split("\n");
+  }
+
+  private static String strArr2Str(String[] arr) {
+    StringBuilder sb = new StringBuilder("");
+    for (String s : arr) {
+      s = s.replaceAll("\n", "");
+      sb.append(s).append("\n");
+    }
+    return sb.toString();
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if (otherArgs.length != 3) {
+      System.err.println("Usage: wordcount <in> <out> <templatefile>");
+      System.exit(2);
+    }
+
+    String[] templates = SgdCrf.readTemplates(otherArgs[2]).toArray(new String[0]);
+    conf.set("templates", strArr2Str(templates));
+
+    Job job = new Job(conf, FeatureCounter.class.getSimpleName());
+
+    job.setJarByClass(FeatureCounter.class);
+    job.setMapperClass(CounterMapper.class);
+    job.setCombinerClass(SumReducer.class);
+    job.setReducerClass(SumReducer.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(LongWritable.class);
+    FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+    FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
 }
